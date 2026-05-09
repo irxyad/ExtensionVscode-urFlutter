@@ -18,9 +18,9 @@ export class TerminalService {
 		return this.terminal;
 	}
 
-  /**
-  * [Terminal Umum] Untuk command interaktif yang ingin dilihat outputnya secara real-time di terminal
-  */
+	/**
+	 * [Terminal Umum] Untuk command interaktif yang ingin dilihat outputnya secara real-time di terminal
+	 */
 
 	execute(command: string, clearFirst = false): void {
 		const terminal = this.getOrCreate();
@@ -37,32 +37,61 @@ export class TerminalService {
 		}, 50);
 	}
 
-  /**
-  * [Exec Child Process] Untuk command yang ingin dijalankan secara async dan gk interaktif
-  */
+	/**
+	 * [Exec Child Process] Untuk command yang ingin dijalankan secara async dan gk interaktif
+	 */
 	executeAsync(
-		command: string,
-		options?: ExecOptions,
-	): Promise<{ stdout: string; stderr: string }> {
-		const cwd =
-			options?.cwd ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  command: string,
+  options?: ExecOptions & { timeoutMs?: number },
+): Promise<{ stdout: string; stderr: string }> {
+  const cwd =
+    options?.cwd ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
-		if (!cwd) {
-			return Promise.reject(new Error('No workspace folder open'));
-		}
+  if (!cwd) {
+    return Promise.reject(new Error('No workspace folder open'));
+  }
 
-		return new Promise((resolve, reject) => {
-			const process = exec(command, { ...options, cwd }, (error, stdout, stderr) => {
-				if (error) {
-					reject(new Error(`Command failed: ${command}\n${stderr || error.message}`));
-					return;
-				}
-				resolve({ stdout, stderr });
-			});
+  return new Promise((resolve, reject) => {
+    const timeoutMs = options?.timeoutMs ?? 60_000; // 60 detik
 
-			// Log stderr real-time ke output channel
-			process.stderr?.on('data', (data: string) => {
-				logger.warn(`[${this.label}] stderr:`, data);
+    const childProcess = exec(
+      command,
+      { ...options, cwd },
+      (error, stdout, stderr) => {
+        clearTimeout(timer);
+
+        if (error && !stdout) {
+          reject(
+            new Error(`Command failed: ${command}\n${stderr || error.message}`),
+          );
+          return;
+        }
+
+        resolve({ stdout, stderr });
+      },
+    );
+
+    // Timeout handler untuk mencegah proses yang menggantung tanpa batas waktu
+    const timer = setTimeout(() => {
+      childProcess.kill();
+      reject(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
+    }, timeoutMs);
+
+    childProcess.stderr?.on('data', (data: string) => {
+      logger.warn(`[${this.label}] stderr:`, data);
+    });
+
+    childProcess.stdout?.on('data', (data: string) => {
+      logger.log(`[${this.label}] stdout:`, data);
+    });
+  });
+}
+
+	// Untuk mengecek apakah command tersedia
+	commandExists(command: string): Promise<boolean> {
+		return new Promise((resolve) => {
+			exec(command, (error) => {
+				resolve(!error);
 			});
 		});
 	}

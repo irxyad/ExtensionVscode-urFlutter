@@ -1,5 +1,7 @@
 import FileUtils from '@common/utils/file.utils';
 import { TerminalService } from '@services/terminal.service';
+import fs from 'fs';
+import path from 'path';
 import * as vscode from 'vscode';
 
 export const installFirebase = async () => {
@@ -47,6 +49,42 @@ async function startInstalling(terminal: TerminalService) {
 					return;
 				}
 
+				// Cek apakah firebase CLI sudah terinstall, karena kalau belum nanti bakal error pas flutterfire configure
+				progress.report({ message: 'Checking for firebase CLI...' });
+				const hasFirebaseCLI =
+					await terminal.commandExists('firebase --version');
+
+				if (token.isCancellationRequested) {
+					return;
+				}
+
+				if (!hasFirebaseCLI) {
+					const hasNpm = await terminal.commandExists('npm --version');
+
+					if (!hasNpm) {
+						vscode.window
+							.showErrorMessage(
+								'Firebase CLI not found and npm is not available to install it. Please install Firebase CLI manually.',
+								'See Firebase CLI docs',
+							)
+							.then((selection) => {
+								if (selection === 'See Firebase CLI docs') {
+									vscode.env.openExternal(
+										vscode.Uri.parse('https://firebase.google.com/docs/cli'),
+									);
+								}
+							});
+						return;
+					}
+
+					progress.report({ message: 'Installing firebase CLI...' });
+					await terminal.executeAsync('npm install -g firebase-tools');
+
+					if (token.isCancellationRequested) {
+						return;
+					}
+				}
+
 				progress.report({ message: 'Adding firebase_core... (1/4)' });
 				await terminal.executeAsync('flutter pub add firebase_core');
 
@@ -87,37 +125,48 @@ async function startInstalling(terminal: TerminalService) {
 		},
 	);
 }
-
 function waitForFirebaseOptions(
-	token: vscode.CancellationToken,
+  token: vscode.CancellationToken,
 ): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const watcher = vscode.workspace.createFileSystemWatcher(
-			'**/firebase_options.dart',
-			false,
-			true,
-			true,
-		);
+  return new Promise((resolve, reject) => {
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!cwd) {return reject(new Error('No workspace folder open'));}
 
-		const cleanup = (fn: () => void) => {
-			clearTimeout(timeoutId);
-			cancelListener.dispose();
-			watcher.dispose();
-			fn();
-		};
+    const targetPath = path.join(cwd, 'lib', 'firebase_options.dart');
+    const isExist = fs.existsSync(targetPath);
 
-		const timeoutId = setTimeout(() => {
-			cleanup(() =>
-				reject(new Error('Timeout: firebase_options.dart not created')),
-			);
-		}, 120_000); // 2 menit
+    const watcher = vscode.workspace.createFileSystemWatcher(
+      '**/firebase_options.dart',
+      false,
+      false,
+      true,
+    );
 
-		const cancelListener = token.onCancellationRequested(() => {
-			cleanup(() => resolve());
-		});
+    const cleanup = (fn: () => void) => {
+      clearTimeout(timeoutId);
+      cancelListener.dispose();
+      watcher.dispose();
+      fn();
+    };
 
-		watcher.onDidCreate(() => cleanup(() => resolve()));
-	});
+    const timeoutId = setTimeout(() => {
+      cleanup(() =>
+        reject(new Error('Timeout: firebase_options.dart not created')),
+      );
+    }, 120_000); // 120 detik
+
+    const cancelListener = token.onCancellationRequested(() => {
+      cleanup(() => resolve());
+    });
+
+    // Kalau file belum ada, tunggu dibuat
+    watcher.onDidCreate(() => cleanup(() => resolve()));
+
+    // Kalau file sudah ada, tunggu diubah
+    if (isExist) {
+      watcher.onDidChange(() => cleanup(() => resolve()));
+    }
+  });
 }
 
 async function handleFirebaseSetup() {
@@ -165,7 +214,7 @@ async function insertFirebaseInitAppIntoMainFile(uri: vscode.Uri) {
 		uri,
 		'Firebase.initializeApp',
 	);
-   // sudah ada, skip
+	// sudah ada, skip
 	if (hasInit !== null) {
 		return;
 	}
