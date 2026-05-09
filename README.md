@@ -51,13 +51,16 @@ To create a snippet, simply select the text, `right-click`, choose **urFlutter**
 - ✂️ Create Snippet – Highlight code and save it as a reusable snippet, categorized by workspace for easy management
 
 ---
-
 ## 📦 Installation Guide
 
 1. Open **Visual Studio Code**
 2. Go to the **Extensions** tab (`Ctrl + Shift + X`)
 3. Search for **`urFlutter`**
 4. Click **Install**
+
+Or install directly from the marketplace:
+
+👉 https://marketplace.visualstudio.com/items?itemName=Needurhaq.urflutter
 
 ---
 
