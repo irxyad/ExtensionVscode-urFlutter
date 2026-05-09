@@ -1,0 +1,470 @@
+/* ROOT */
+html,
+body {
+	margin: 0;
+	padding: 0;
+	color: white;
+	user-select: none;
+	font-family: sans-serif;
+}
+
+.main-page {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	min-height: 97dvh;
+	margin: 0 10px;
+	padding: 10px;
+	background-color: #1e20304d;
+	border-radius: 0 15px 15px 15px;
+}
+
+.content-container {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+}
+
+.tabbar {
+	flex-shrink: 0;
+}
+
+.content-container {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.content {
+	flex: 1;
+}
+
+/* FOOTER */
+/* footer {
+} */
+
+footer {
+	flex-shrink: 0;
+	padding: 15px 0 0 0;
+}
+
+footer .contents {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+footer .portfolio-link {
+	padding: 10px;
+	width: 100%;
+	background-color: white;
+	color: #121212;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	text-align: start;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+footer .portfolio-link:hover {
+	background-color: #121212;
+	color: white;
+}
+
+/* PANEL */
+.panel-wrapper {
+	display: flex;
+	gap: 10px;
+	flex-direction: column;
+	width: 100%;
+}
+
+.panel-info {
+	font-size: 1.2rem;
+	font-weight: bold;
+	line-height: 2rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin: 1rem;
+	text-align: center;
+}
+
+/* HEADER */
+/* container yang logo urFlutter */
+.panel-header {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	justify-content: center;
+	align-items: center;
+	padding: 10px;
+	margin: 20px 0 0 0;
+	background: #ffffff05;
+	border-radius: 10px;
+	border: 1px solid #f0f0f01e;
+	gap: 5px;
+	background-image: url('https://raw.githubusercontent.com/irxyad/project-assets/refs/heads/main/assets/urFlutter/dot-gradient2.png'); /* ganti path-nya */
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: cover;
+}
+
+.logo-header {
+	height: 30%;
+	max-width: 60px;
+	max-height: 60px;
+	width: 30%;
+}
+
+.ext-name {
+	font-weight: bold;
+	font-size: 1rem;
+}
+
+.ext-name .ur {
+	color: white;
+}
+
+.ext-name .flutter {
+	color: white;
+}
+
+.label-header {
+	font-size: 0.8rem;
+	font-weight: bold;
+	line-height: 2rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	margin: 1rem;
+	text-align: center;
+}
+
+/* TITLE */
+/* yang Thanks & Welcome */
+.title {
+	font-size: 1rem;
+	font-weight: bold;
+	line-height: 2rem;
+	text-align: center;
+}
+
+/* CONTEXT MENUS */
+.section-context-menus {
+	display: flex;
+	flex-direction: column;
+	padding: 0 5px;
+	border-radius: 10px;
+	background: #f0f0f027;
+}
+
+.context-menus {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding-left: 20px;
+	margin: 0 10px 10px 0;
+	/* list-style-position: inside; */
+}
+
+/* SIDEBAR MENU */
+.section-sidebar-menus {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	gap: 0px;
+}
+
+.list-sidebar-menus {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+.label-main-menu {
+	border-bottom: 1px solid #f0f0f027;
+	padding-bottom: 5px;
+}
+
+.warning-main-menu {
+	background-color: #fbff0815;
+	color: #fbff08ff;
+	padding: 5px;
+	margin: 0 0 15px 0;
+}
+
+/* BUTTON */
+/* OLD STYLE DIBAWAH */
+/* .urflutter-button {
+	width: 100%;
+	background-color: #f0f0f027;
+	color: white;
+	border: 1px solid rgba(240, 240, 240, 0.2);
+	border-radius: 10px;
+	padding: 10px 10px;
+	cursor: pointer;
+	text-align: start;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.urflutter-button:hover {
+	background-color: #065a9d;
+	border: 1px solid #5ec4f2;
+} */
+
+.urflutter-button {
+	width: 100%;
+	background-color: #f0f0f027;
+	border-radius: 8px;
+	cursor: pointer;
+	overflow: hidden;
+	padding: 12px;
+	font-size: 14px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	text-align: start;
+	border: none;
+	color: white;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.urflutter-button:hover {
+	background: #f1f1f1;
+	color: #000;
+}
+
+.urflutter-dropdown {
+	width: 100%;
+	background-color: #f0f0f027;
+	color: white;
+	border: 1px solid rgba(240, 240, 240, 0.2);
+	border-radius: 10px;
+	padding: 10px 10px;
+	cursor: pointer;
+	text-align: start;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.urflutter-dropdown:hover {
+	background-color: #065a9d;
+	border: 1px solid #5ec4f2;
+}
+
+.urflutter-dropdown:focus {
+	/* background-color: #065a9d; */
+	border: 1px solid #5ec4f2 !important;
+}
+
+.urflutter-dropdown option {
+	background-color: #f0f0f027;
+	color: black;
+}
+
+.urflutter-dropdown option:hover {
+	background-color: #065a9d;
+	color: white;
+}
+
+.urflutter-dropdown option:disabled {
+	color: #ccc;
+	background-color: #f0f0f0;
+}
+
+/* TABBAR */
+.tabbar {
+	display: flex;
+	gap: 10px;
+	margin: 0 10px;
+}
+
+.tab {
+	flex: 1;
+	padding: 10px;
+	cursor: pointer;
+	background: transparent;
+	border: none;
+	color: #818181ff;
+	border-radius: 8px 8px 0 0;
+	transition: all 0.3s ease-in-out;
+}
+
+.tab:hover {
+	color: #818181ff;
+	border-radius: 8px 8px 0 0;
+}
+
+.tab.active {
+	/* border-bottom: 2px solid #fff; */
+	font-weight: bold;
+	color: #fff;
+	background-color: #1e20304d;
+}
+
+.page {
+	display: none;
+	padding: 10px;
+}
+
+.page.active {
+	display: flex;
+}
+
+/* SNIPPET */
+/* SNIPPET VIEW */
+.snippet-view {
+	flex-direction: column;
+	width: 100%;
+	gap: 10px;
+}
+
+.btn-delete-group-snippet,
+.btn-delete-snippet,
+.btn-rename-snippet {
+	display: none;
+	background: #bebebe9c;
+	margin: 0;
+	width: 20px;
+	height: 20px;
+	border: none;
+	color: black;
+	font-weight: bold;
+	cursor: pointer;
+	padding: 0 4px;
+	border-radius: 4px;
+	text-align: center;
+	transition: background 0.2s ease;
+}
+
+.btn-delete-group-snippet {
+	font-size: 20px;
+}
+.btn-delete-snippet {
+	font-size: 20px;
+}
+
+.btn-rename-snippet {
+	font-size: 14px;
+}
+
+.btn-delete-group-snippet:hover,
+.btn-delete-snippet:hover {
+	background: #b3b3b3;
+	color: red;
+}
+
+.btn-rename-snippet:hover {
+	background: #b3b3b3;
+	color: rgb(2, 79, 179);
+}
+
+/* ACCORDION DI SNIPPET */
+.accordion {
+	border-radius: 8px;
+	overflow: hidden;
+	background-color: #f0f0f027;
+}
+
+/* .accordion-item {
+} */
+
+.accordion-header {
+	padding: 12px;
+	font-size: 14px;
+	font-weight: 500;
+	cursor: pointer;
+	display: flex;
+	justify-content: start;
+	align-items: start;
+}
+
+.accordion-header-title {
+	width: 90%;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	gap: 5px;
+	word-break: break-all;
+}
+
+.accordion-header:hover .btn-delete-group-snippet {
+	display: block;
+}
+
+.accordion-header:hover {
+	background: #f1f1f1;
+	color: #000;
+}
+
+.accordion-header::before {
+	content: '\276F'; /* ❯ arrow kanan */
+	display: inline-block;
+	margin-right: 8px;
+	font-size: 14px;
+	transition: transform 0.3s ease;
+}
+
+.accordion-item.active .accordion-header::before {
+	transform: rotate(90deg); /* jadi panah bawah */
+}
+
+.accordion-content {
+	display: none;
+	font-size: 13px;
+	color: #fff;
+	background: #ffffff21;
+	gap: 10px;
+}
+
+.accordion-item.active .accordion-content {
+	display: block;
+}
+
+.accordion-content-item {
+	display: flex;
+	align-items: center;
+	flex-direction: row;
+	gap: 10px;
+	justify-content: space-between;
+	padding: 1px 8px;
+	margin: 0;
+	cursor: pointer;
+}
+
+.accordion-actions {
+	display: inline-flex; /* supaya ikut konten */
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 0;
+	margin: 10px 0;
+}
+
+.accordion-content-item:hover {
+	background: #f1f1f1;
+	color: #000;
+}
+
+.accordion-content-item:hover .btn-delete-snippet,
+.accordion-content-item:hover .btn-rename-snippet {
+	display: block;
+}
+
+.accordion-snippets {
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+}
+
+.accordion-header-title .text-section {
+	flex-direction: column;
+	/* white-space: normal; */
+	word-break: keep-all;
+}
+
+.text-section .subtitle {
+	font-size: smaller;
+	opacity: 0.7;
+}

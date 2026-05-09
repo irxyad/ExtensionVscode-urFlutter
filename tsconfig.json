@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"jsx": "react-jsx",
+		"module": "Node16",
+		"target": "ES2022",
+		"outDir": "out",
+		"rootDir": "src",
+		"lib": ["ES2022", "DOM"],
+		"sourceMap": true,
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "Node16",
+		"declaration": true,
+		"declarationMap": true,
+    "paths": {
+			"@features/*": ["./src/features/*"],
+			"@common/*": ["./src/common/*"],
+			"@providers/*": ["./src/providers/*"],
+			"@services/*": ["./src/services/*"],
+			"@webview/*": ["./src/webview/*"],
+
+		},
+	},
+	"include": ["src/**/*.ts", "src/**/*.tsx"],
+	"exclude": ["node_modules"]
+}

@@ -1,0 +1,146 @@
+{
+	"name": "urflutter",
+	"displayName": "urFlutter",
+	"description": "Just speeding ur flutter development (hope so 😁) ",
+	"publisher": "Needurhaq",
+	"version": "0.2.1",
+	"icon": "assets/logo.png",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"keywords": [
+		"flutter",
+		"dart",
+		"urflutter",
+		"flutter-tools",
+		"codegen"
+	],
+	"categories": [
+		"Programming Languages",
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/irxyad/vscode-extension-urflutter.git"
+	},
+	"main": "./out/extension.js",
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "urFlutterSidebar",
+					"title": "urFlutter",
+					"icon": "assets/icon-extension.svg"
+				},
+				{
+					"id": "webview",
+					"title": "urFlutter",
+					"icon": "assets/icon-extension.svg"
+				}
+			]
+		},
+		"views": {
+			"webview": [
+				{
+					"type": "webview",
+					"id": "main-panel",
+					"name": "urFlutter",
+					"icon": "assets/icon-extension.svg"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "extension.generateFromToEntity",
+				"title": "Generate From/To Entity"
+			},
+			{
+				"command": "extension.createSnippet",
+				"title": "Create Snippet"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"submenu": "extension.snippet",
+					"group": "navigation",
+					"when": "editorHasSelection"
+				}
+			],
+			"explorer/context": [
+				{
+					"submenu": "extension.submenu",
+					"group": "navigation"
+				}
+			],
+			"extension.submenu": [
+				{
+					"command": "extension.generateFromToEntity",
+					"when": "resourceLangId == dart"
+				}
+			],
+			"extension.snippet": [
+				{
+					"command": "extension.createSnippet"
+				}
+			]
+		},
+		"submenus": [
+			{
+				"id": "extension.submenu",
+				"label": "urFlutter",
+				"icon": "$(rocket)"
+			},
+			{
+				"id": "extension.snippet",
+				"label": "urFlutter",
+				"icon": "$(rocket)"
+			}
+		]
+	},
+	"scripts": {
+		"build": "npm run clean && npm run build:extension && npm run build:webview && npm run build:css",
+		"build:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --loader:.ts=ts --platform=node --format=cjs --external:vscode --sourcemap --minify",
+		"build:webview": "npm run build:webview:components && npm run build:webview:views",
+		"build:webview:components": "esbuild src/webview/components/*.tsx --bundle --outdir=out/webview/components --loader:.tsx=tsx --platform=browser --format=iife --minify --sourcemap --external:vscode",
+		"build:webview:views": "esbuild src/webview/views/*.tsx --bundle --outdir=out/webview/views --loader:.tsx=tsx --platform=browser --format=iife --minify --sourcemap --external:vscode",
+		"build:css": "esbuild src/*.css --outdir=out --minify",
+		"dev": "npm run clean && npm-run-all --parallel  dev:extension dev:webview:components dev:webview:views dev:css",
+		"dev:extension": "esbuild src/extension.ts --bundle --outfile=out/extension.js --loader:.ts=ts --platform=node --format=cjs --external:vscode --sourcemap --watch",
+		"dev:webview:components": "esbuild src/webview/components/*.tsx --bundle --outdir=out/webview/components --loader:.tsx=tsx --platform=browser --format=iife --sourcemap --external:vscode --watch",
+		"dev:webview:views": "esbuild src/webview/views/*.tsx --bundle --outdir=out/webview/views --loader:.tsx=tsx --platform=browser --format=iife --sourcemap --external:vscode --watch",
+		"dev:css": "esbuild src/*.css --outdir=out --watch",
+		"clean": "rimraf out",
+		"watch": "npm run dev",
+		"pretest": "npm run build",
+		"vscode:prepublish": "npm run build"
+	},
+	"devDependencies": {
+		"@types/chai": "^5.2.2",
+		"@types/fs-extra": "^11.0.4",
+		"@types/mocha": "^10.0.10",
+		"@types/node": "20.x",
+		"@types/vscode": "^1.100.0",
+		"@types/vscode-webview": "^1.57.5",
+		"@typescript-eslint/eslint-plugin": "^8.31.1",
+		"@typescript-eslint/parser": "^8.31.1",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.5.2",
+		"chai": "^5.2.0",
+		"esbuild": "^0.28.0",
+		"eslint": "^9.25.1",
+		"npm-run-all": "^4.1.5",
+		"rimraf": "^6.0.1",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@types/react-dom": "^19.1.6",
+		"fs-extra": "^11.3.0",
+		"glob": "^11.0.3",
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0"
+	}
+}
