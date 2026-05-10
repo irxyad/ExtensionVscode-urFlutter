@@ -1,9 +1,9 @@
 const IMAGE_CACHE_PREFIX = 'img_cache_';
 
-export async function getCachedImage(
-	url: string,
-	webviewBaseUri?: string,
-): Promise<string> {
+/**
+ * Untuk mengambil gambar cache jika ada, jika tidak ada, fetch dari URL dan simpan ke cache
+ */
+export async function get(url: string): Promise<string> {
 	const cacheKey = `${IMAGE_CACHE_PREFIX}${btoa(url)}`;
 
 	// Cek cache dulu
@@ -36,8 +36,15 @@ function blobToBase64(blob: Blob): Promise<string> {
 	});
 }
 
-export function clearImageCache(): void {
+function clear(): void {
 	Object.keys(localStorage)
 		.filter((key) => key.startsWith(IMAGE_CACHE_PREFIX))
 		.forEach((key) => localStorage.removeItem(key));
 }
+
+const ImageCacheUtils = {
+	get,
+	clear,
+};
+
+export default ImageCacheUtils;

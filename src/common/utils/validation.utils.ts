@@ -1,8 +1,3 @@
-export function isValidInputBox(name: string): boolean {
-	const regex = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
-	return regex.test(name);
-}
-
 // Validasi khusus flutter
 const DART_RESERVED_KEYWORDS = new Set([
 	'assert',
@@ -64,7 +59,12 @@ const DART_RESERVED_KEYWORDS = new Set([
 	'when',
 ]);
 
-export function isValidFlutterProjectName(name: string): boolean {
+function snippetName(name: string): boolean {
+	const regex = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+	return regex.test(name);
+}
+
+function projectName(name: string): boolean {
 	const regex = /^[a-z][a-z0-9_]*$/;
 	if (!regex.test(name)) {
 		return false;
@@ -77,3 +77,7 @@ export function isValidFlutterProjectName(name: string): boolean {
 
 	return true;
 }
+
+const ValidationUtils = { snippetName, projectName };
+
+export default ValidationUtils;
