@@ -37,6 +37,12 @@ interface createResult {
 	isExists: boolean;
 }
 
+type UpdateLineOptions = {
+	filePath: string;
+	keyword: string | string[];
+	endKeyword?: string;
+	newText: string;
+};
 /**
  * Ngecek file sudah ada atau belum
  * @param filename (relative path)
@@ -284,24 +290,50 @@ async function findLastLine(
 /**
  * Update baris sesuai baris keyword yang pertama ditemukan
  */
-async function updateLine(
-	uri: vscode.Uri,
-	keyword: string,
-	newText: string,
-): Promise<void> {
+async function updateLine(options: UpdateLineOptions): Promise<void> {
+	const { filePath, keyword, endKeyword, newText } = options;
+
+	const projectUri = ProjectUtils.getUri();
+	const uri = vscode.Uri.joinPath(projectUri, filePath);
+
 	const doc = await vscode.workspace.openTextDocument(uri);
 	const edit = new vscode.WorkspaceEdit();
 
 	const lines = doc.getText().split('\n');
+	const keywords = Array.isArray(keyword) ? keyword : [keyword];
 
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
-			const range = new vscode.Range(i, 0, i, lines[i].length);
+	let startLine: number | null = null;
 
-			edit.replace(uri, range, newText);
+	for (const kw of keywords) {
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].toLowerCase().includes(kw.toLowerCase())) {
+				startLine = i;
+				break;
+			}
+		}
+		if (startLine !== null) {
 			break;
 		}
 	}
+
+	if (startLine === null) {
+		return;
+	}
+
+	let endLine = startLine;
+
+	if (endKeyword) {
+		for (let i = startLine + 1; i < lines.length; i++) {
+			if (lines[i].toLowerCase().includes(endKeyword.toLowerCase())) {
+				endLine = i;
+				break;
+			}
+		}
+	}
+
+	const range = new vscode.Range(startLine, 0, endLine, lines[endLine].length);
+
+	edit.replace(uri, range, newText);
 
 	await vscode.workspace.applyEdit(edit);
 	await doc.save();

@@ -32,7 +32,7 @@ interface FindMainLineResult {
 /**
  * @returns Nama project flutter yang didapat dari pubspec.yaml
  */
-async function getProjectName(): Promise<string> {
+async function getProjectName(): Promise<{ name: string; rawName: string }> {
 	const pubspec = await FileUtils.find('pubspec.yaml');
 
 	if (!pubspec) {
@@ -52,11 +52,12 @@ async function getProjectName(): Promise<string> {
 		throw new Error('Invalid name format in pubspec.yaml');
 	}
 
-	// Capitalize setiap kata, snake_case → Title Case
-	return rawName
+	const name = rawName
 		.split('_')
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 		.join(' ');
+
+	return { name, rawName };
 }
 
 /**
@@ -152,11 +153,11 @@ async function insertIntoMain(options: InsertIntoMainOptions): Promise<void> {
 	if (hasAwaitAtInsertText) {
 		const isOnlyVoidMain = lineMain.keyword === KeywordMainLines[0]; // 0 karena index 0 itu keyword void main
 		if (isOnlyVoidMain) {
-			await FileUtils.updateLine(
-				mainFile.uri,
-				lineMain.keyword,
-				'Future<void> main() async {',
-			);
+			await FileUtils.updateLine({
+				filePath: mainFile.relativePath,
+				keyword: lineMain.keyword,
+				newText: 'Future<void> main() async {',
+			});
 		}
 	}
 

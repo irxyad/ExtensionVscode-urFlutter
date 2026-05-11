@@ -41,7 +41,7 @@ export async function createLocalizationFiles(
 				progress.report({ message: 'Creating files...' });
 				const results = await Promise.all(
 					languages.map((lang) =>
-						FileUtils.createFile({
+						FileUtils.create({
 							filename: `${JSON_LOCALIZATION_PATH}/${lang}.json`,
 							data: '{}',
 						}),
@@ -57,10 +57,6 @@ export async function createLocalizationFiles(
 					.filter((r) => r && r.isExists)
 					.map((r) => getLocaleName(r!.filename));
 
-				const createdFiles = results
-					.filter((r) => r && !r.isExists)
-					.map((r) => getLocaleName(r!.filename));
-
 				if (existingFiles.length === results.length) {
 					vscode.window.showErrorMessage(
 						`Locale (${existingFiles.join(', ')}) already exist. Aborted!`,
@@ -74,12 +70,6 @@ export async function createLocalizationFiles(
 					);
 				}
 
-				if (createdFiles.length > 0) {
-					vscode.window.showInformationMessage(
-						`Created: ${createdFiles.join(', ')}`,
-					);
-				}
-
 				progress.report({ message: 'Adding package easy_localization...' });
 				await PubspecUtils.installPackages(terminal, ['easy_localization']);
 
@@ -87,10 +77,36 @@ export async function createLocalizationFiles(
 				await PubspecUtils.addAssets([`${JSON_LOCALIZATION_PATH}/`]);
 
 				progress.report({ message: 'Formatting pubspec.yaml...' });
-				await PubspecUtils.formatPubspec();
+				await PubspecUtils.format();
 
 				progress.report({ message: 'Configuring app...' });
-				await configurationApp(createdFiles);
+				const isInit = !(await FileUtils.isExists(APP_LOCALIZATION_PATH))
+					.isExists;
+
+				if (isInit) {
+					const allFiles = await FileUtils.getFiles(JSON_LOCALIZATION_PATH);
+
+					const allLocales = allFiles.map((f) => getLocaleName(f));
+					if (allLocales.length > 0) {
+						await configurationApp(true, allLocales);
+
+						vscode.window.showInformationMessage(
+							`Created: ${allLocales.join(', ')}`,
+						);
+					}
+				} else {
+					const createdFiles = results
+						.filter((r) => r && !r.isExists)
+						.map((r) => getLocaleName(r!.filename));
+
+					if (createdFiles.length > 0) {
+						await configurationApp(false, createdFiles);
+
+						vscode.window.showInformationMessage(
+							`Created: ${createdFiles.join(', ')}`,
+						);
+					}
+				}
 
 				vscode.window.showInformationMessage(
 					'Localization installed & configured!',
@@ -105,40 +121,38 @@ export async function createLocalizationFiles(
 }
 
 async function showInstructionToWrap() {
-	const projectName = await FlutterUtils.getFlutterProjectName();
-	const importPath = `package:${projectName}/${APP_LOCALIZATION_PATH}`;
+	const projectName = await FlutterUtils.getProjectName();
+	const importPath = `package:${projectName.rawName}/${APP_LOCALIZATION_PATH.split('/').slice(1).join('/')}`;
 
 	const instructions = [
-		'1. Add this import to your main.dart:',
+		'If not yet added, add this import to your main.dart:',
 		'',
 		`   import 'package:easy_localization/easy_localization.dart';`,
+		'',
+		'Add this inside main() after WidgetsFlutterBinding.ensureInitialized():',
+		'',
+		'   await EasyLocalization.ensureInitialized();',
+		'',
+		'Wrap your root widget with EasyLocalization and add locale in MaterialApp:',
+		'',
 		`   import '${importPath}';`,
 		'',
-		'2. Wrap your root widget with EasyLocalization:',
-		'',
 		'   EasyLocalization(',
-		'     supportedLocales: const [',
-		'       AppLocalizations.idLocale,',
-		'       AppLocalizations.enLocale,',
-		'     ],',
+		'     supportedLocales: AppLocalizations.supportedLocales,',
 		'     path: AppLocalizations.path,',
-		'     fallbackLocale: AppLocalizations.enLocale,',
-		'     child: const MyApp(),',
-		'   )',
-		'',
-		'3. Add locale in MaterialApp:',
-		'',
-		'   MaterialApp(',
-		'     localizationsDelegates: context.localizationDelegates,',
-		'     supportedLocales: context.supportedLocales,',
-		'     locale: context.locale,',
+		'     fallbackLocale: AppLocalizations.supportedLocales.first,',
+		'     child: MaterialApp(',
+		'       localizationsDelegates: context.localizationDelegates,',
+		'       supportedLocales: context.supportedLocales,',
+		'       locale: context.locale,',
+		'     ),',
 		'   )',
 	];
 
 	logger.instruction('Localization Setup', instructions);
 }
 
-async function configurationApp(newLocales: string[]) {
+async function configurationApp(isInit: boolean, locales: string[]) {
 	// Inject import dan EasyLocalization.ensureInitialized
 	try {
 		await injectToMain();
@@ -150,7 +164,7 @@ async function configurationApp(newLocales: string[]) {
 
 	// Membuat file app_localizations
 	try {
-		await createFileAppLocalization(newLocales);
+		await createAppLocalization(isInit, locales);
 	} catch (error) {
 		vscode.window.showErrorMessage(
 			`Failed to create app_localizations: ${error}`,
@@ -159,25 +173,20 @@ async function configurationApp(newLocales: string[]) {
 		return;
 	}
 
-	// Show instruksi untuk wrap manual di root widget
-	showInstructionToWrap();
+	// Show instruksi jika pertama kali install
+	if (isInit) {
+		showInstructionToWrap();
+	}
 }
 
 async function injectToMain() {
-	const injectText = 'await EasyLocalization.ensureInitialized();';
-
-	const success = await FlutterUtils.insertIntoMain({
+	await FlutterUtils.insertIntoMain({
 		label: 'Localization Setup',
 		detectKeyword: 'EasyLocalization.ensureInitialized',
-		insertText: injectText,
+		insertText: 'await EasyLocalization.ensureInitialized();',
 		afterKeyword: 'WidgetsFlutterBinding.ensureInitialized',
 		prependText: '  WidgetsFlutterBinding.ensureInitialized();',
-		instructions: [injectText],
 	});
-
-	if (!success) {
-		return;
-	}
 
 	// Kemudian kita inject imports nya
 	await FlutterUtils.insertImportsIntoMain('Localization Setup', {
@@ -185,47 +194,101 @@ async function injectToMain() {
 	});
 }
 
+function generateNameLocale(localeFile: string) {
+	const [lang, countryCode] = localeFile.split('.')[0].split('-');
+
+	const cc = countryCode.toLowerCase();
+	const isSameCC = lang === cc;
+	const varName = isSameCC ? lang : `${lang}${cc.firstUppercase}`;
+
+	return `${varName}Locale`;
+}
+
 function generateLocale(localeFiles: string[]): string {
 	return localeFiles
 		.map((localeFile) => {
 			const [lang, countryCode] = localeFile.split('.')[0].split('-');
 
-			const cc = countryCode.toLowerCase();
-			const isSameCC = lang === cc;
-			const varName = isSameCC ? lang : `${lang}${cc.firstUppercase}`;
+			const varName = generateNameLocale(localeFile);
 
-			return `  static const Locale ${varName}Locale = Locale('${lang}', '${countryCode ?? ''}');`;
+			return `  static const Locale ${varName} = Locale('${lang}', '${countryCode ?? ''}');`;
 		})
 		.join('\n');
 }
 
-async function createFileAppLocalization(newLocales: string[]) {
-	if (newLocales.isEmpty) {
+// function generateSupportedLocales(newLocales: string[]) {
+// 	const txt = [
+// 		`  static const List<Locale> supportedLocales = [`,
+// 		newLocales
+// 			.map((locale) => {
+// 				return generateNameLocale(locale);
+// 			})
+// 			.join(',\n'),
+// 		'  ];',
+// 	];
+
+// 	return txt;
+// }
+
+function generateSupportedLocales(newLocales: string[]) {
+	return newLocales
+		.map((locale) => {
+			return generateNameLocale(locale);
+		})
+		.join(',\n');
+}
+
+async function createAppLocalization(isInit: boolean, locales: string[]) {
+	if (locales.isEmpty) {
 		vscode.window.showInformationMessage('No localization files found.');
 		return;
 	}
 
 	const appLocalizationContent = [
+		'// GENERATED CODE - DO NOT MODIFY BY HAND',
+		'',
 		"import 'package:flutter/material.dart';",
 		'',
 		'class AppLocalizations {',
-		generateLocale(newLocales),
+		generateLocale(locales),
+		'',
+		`  static const List<Locale> supportedLocales = [`,
+		generateSupportedLocales(locales),
+		'// DO NOT REMOVE THIS LINE, IT IS USED FOR FLAG',
+		'  ];',
 		'',
 		`  static const path = '${JSON_LOCALIZATION_PATH}';`,
 		'}',
 	].join('\n');
 
-	const fileResult = await FileUtils.isExistsFile(APP_LOCALIZATION_PATH);
-
-	if (fileResult.isExists) {
-		vscode.window.showInformationMessage('Update Applocalization...');
-
-		await FileUtils.editFile({
+	if (!isInit) {
+		await FileUtils.edit({
 			filePath: APP_LOCALIZATION_PATH,
 			insertAt: {
-				text: generateLocale(newLocales),
+				text: generateLocale(locales),
 				line: {
 					afterKeyword: 'static const Locale',
+					last: true,
+				},
+			},
+		});
+		// Update supportedLocales list
+		// await FileUtils.updateLine({
+		// 	filePath: APP_LOCALIZATION_PATH,
+		// 	keyword: ['static const List<Locale> supportedLocales = [', '['],
+		// 	endKeyword: '];',
+		// 	newText: generateSupportedLocales([...oldLocales, ...newLocales]).join(
+		// 		'\n',
+		// 	),
+		// });
+
+		// Update supportedLocales
+		await FileUtils.edit({
+			filePath: APP_LOCALIZATION_PATH,
+			insertAt: {
+				text: generateSupportedLocales(locales),
+				line: {
+					afterKeyword: ['Locale,'],
 					last: true,
 				},
 			},
@@ -234,8 +297,11 @@ async function createFileAppLocalization(newLocales: string[]) {
 		return;
 	}
 
-	await FileUtils.createFile({
+	await FileUtils.create({
 		filename: APP_LOCALIZATION_PATH,
 		data: appLocalizationContent,
 	});
+
+	// kita format
+	await FlutterUtils.dartFormat(APP_LOCALIZATION_PATH, 0);
 }
