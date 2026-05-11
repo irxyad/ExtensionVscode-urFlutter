@@ -16,7 +16,7 @@ interface editOptions {
 		line:
 			| number
 			| ((totalLines: number) => number)
-			| { afterKeyword: string; last?: boolean };
+			| { afterKeyword: string | string[]; last?: boolean };
 	};
 }
 
@@ -118,6 +118,7 @@ async function edit(
 				}
 
 				let resolvedLine: number;
+				let keywordLine: number | null = null;
 
 				if (
 					typeof insertAt.line === 'object' &&
@@ -125,12 +126,31 @@ async function edit(
 				) {
 					const { afterKeyword, last = false } = insertAt.line;
 
-					const keywordLine = last
-						? await FileUtils.findLastLine(uri, afterKeyword)
-						: await FileUtils.findLine(uri, afterKeyword);
+					if (afterKeyword instanceof Array) {
+						for (let i = 0; i < afterKeyword.length; i++) {
+							const val = afterKeyword[i];
+
+							const line = last
+								? await FileUtils.findLastLine(uri, val)
+								: await FileUtils.findLine(uri, val);
+
+							if (line !== null) {
+								keywordLine = line;
+								break;
+							}
+						}
+					} else {
+						keywordLine = last
+							? await FileUtils.findLastLine(uri, afterKeyword)
+							: await FileUtils.findLine(uri, afterKeyword);
+					}
 
 					if (keywordLine === null) {
-						throw new Error(`edit: keyword "${afterKeyword}" not found`);
+						const keywordLabel =
+							afterKeyword instanceof Array
+								? afterKeyword.join(' | ')
+								: afterKeyword;
+						throw new Error(`edit: keyword "${keywordLabel}" not found`);
 					}
 
 					resolvedLine = keywordLine + 1;

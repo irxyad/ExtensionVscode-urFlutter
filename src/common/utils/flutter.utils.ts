@@ -1,3 +1,4 @@
+import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
 import FileUtils from './file.utils';
 import { logger } from './logger.utils';
@@ -8,7 +9,7 @@ interface InsertIntoMainOptions {
 	// Text yang akan diinsert
 	insertText: string;
 	// Keyword yang jika ditemukan, insert setelehanya
-	afterKeyword?: string;
+	afterKeyword: string | string[];
 	// Jika afterKeyword tidak ditemukan, insert ini dulu sebelum insertText
 	prependText?: string;
 	// Instructions yang akan ditampilkan jika main.dart tidak ditemukan
@@ -16,6 +17,16 @@ interface InsertIntoMainOptions {
 	// Jika detectKeyword diset dan ditemukan di main.dart,
 	// maka proses insert akan dibatalkan
 	detectKeyword?: string;
+}
+
+interface FindMainFileResult {
+	uri: vscode.Uri;
+	relativePath: string;
+}
+
+interface FindMainLineResult {
+	line: number;
+	keyword: string;
 }
 
 /**
@@ -51,10 +62,10 @@ async function getProjectName(): Promise<string> {
 /**
  * @returns Uri main file baik dari `lib/main.dart` atau `lib/init_main.dart`
  */
-async function findUriMainFile(
+async function findMainFile(
 	label: string,
 	instructions?: string[],
-): Promise<vscode.Uri | null> {
+): Promise<FindMainFileResult | null> {
 	const [initMainFile, mainFile] = await Promise.all([
 		FileUtils.find('lib/init_main.dart'),
 		FileUtils.find('lib/main.dart'),
@@ -85,64 +96,97 @@ async function findUriMainFile(
 		return null;
 	}
 
-	return target;
+	return {
+		uri: target,
+		relativePath: vscode.workspace.asRelativePath(target),
+	};
 }
-
+const KeywordMainLines = ['void main(', 'Future<void> main(', 'Future main('];
 // Untuk cari void main line buat patokan line untuk inject
-async function findMainLine(uri: vscode.Uri): Promise<number | null> {
-	return (
-		(await FileUtils.findLine(uri, 'void main(')) ??
-		(await FileUtils.findLine(uri, 'Future<void> main(')) ??
-		(await FileUtils.findLine(uri, 'Future main('))
-	);
+async function findMainLine(
+	uri: vscode.Uri,
+): Promise<FindMainLineResult | null> {
+	for (const keyword of KeywordMainLines) {
+		const line = await FileUtils.findLine(uri, keyword);
+		if (line !== null) {
+			return {
+				line,
+				keyword,
+			};
+		}
+	}
+	return null;
 }
 
 // Untuk inject text ke void main()
 async function insertIntoMain(options: InsertIntoMainOptions): Promise<void> {
 	const { insertText, afterKeyword, prependText } = options;
 
-	const mainUri = await findUriMainFile(options.label, options.instructions);
-
-	if (!mainUri) {
+	const mainFile = await findMainFile(options.label, options.instructions);
+	if (!mainFile) {
 		throw new Error('Cannot find main file');
 	}
 
-	const lineMain = await findMainLine(mainUri);
-
+	// Ini untuk mencari baris void main
+	const lineMain = await findMainLine(mainFile.uri);
 	if (lineMain === null) {
 		throw new Error('Cannot find main() — add the code manually');
 	}
 
+	// Keyword sudah ada, skip insert
 	if (options.detectKeyword) {
-		const detected = await FileUtils.findLines(mainUri, options.detectKeyword);
-
-		// Keyword sudah ada, skip insert
+		const detected = await FileUtils.findLine(
+			mainFile.uri,
+			options.detectKeyword,
+		);
 		if (detected !== null) {
 			return;
 		}
 	}
 
-	if (afterKeyword) {
-		await FileUtils.edit({
-			filePath: mainUri.fsPath,
-			insertAt: {
-				text: insertText,
-				line: { afterKeyword },
-			},
-		});
-		return;
+	// Kita format dulu file main.dart dan beri delay 5s kemudian run dibawahnya
+	await dartFormat(mainFile.relativePath, 5_000);
+
+	const hasAwaitAtInsertText = insertText.includes('await ');
+
+	if (hasAwaitAtInsertText) {
+		const isOnlyVoidMain = lineMain.keyword === KeywordMainLines[0]; // 0 karena index 0 itu keyword void main
+		if (isOnlyVoidMain) {
+			await FileUtils.updateLine(
+				mainFile.uri,
+				lineMain.keyword,
+				'Future<void> main() async {',
+			);
+		}
 	}
 
-	// Insert prependText dulu (kalau ada), baru insertText
-	const finalText = prependText
-		? `\n${prependText}\n\n${insertText}`
-		: `\n${insertText}`;
+	const prependLine =
+		prependText !== undefined
+			? await FileUtils.findLine(mainFile.uri, prependText)
+			: null;
 
+	const hasPrepend = prependLine !== null;
+
+	// Untuk mengecek apakah keyword yang dicari memiliki kata di baris void main
+	const matchKeyword = afterKeyword.includes(lineMain.keyword);
+
+	// Jika matchKeyword = true, kita sisipikan tepat di bawah line void main
+	// kalau gk berarti kita sisipkan setelah baris afterKeyword
+	const line = matchKeyword
+		? lineMain.line + 1
+		: {
+				afterKeyword: afterKeyword,
+			};
+
+	// Jika hasPrepend = true, berarti kita skip prepend text karena sudah ada di file main
 	await FileUtils.edit({
-		filePath: mainUri.fsPath,
+		filePath: mainFile.relativePath,
 		insertAt: {
-			text: finalText,
-			line: lineMain + 1,
+			text:
+				hasPrepend || !prependText
+					? `\n${insertText}`
+					: `\n${prependText}\n\n${insertText}`,
+			line: line,
 		},
 	});
 }
@@ -158,8 +202,10 @@ async function insertImports(options: InsertImportOptions): Promise<void> {
 
 	// Biar gk duplikat, cek imports dulu
 	const missingImports: string[] = [];
+
 	for (const imp of imports) {
-		const exists = await FileUtils.findLines(uri, imp);
+		const exists = await FileUtils.findLine(uri, imp);
+
 		if (exists === null) {
 			missingImports.push(imp);
 		}
@@ -173,7 +219,7 @@ async function insertImports(options: InsertImportOptions): Promise<void> {
 	const lastImportLine = (await FileUtils.findLine(uri, "import '")) ?? 0;
 
 	await FileUtils.edit({
-		filePath: uri.fsPath,
+		filePath: vscode.workspace.asRelativePath(uri),
 		insertAt: {
 			text: missingImports.join('\n'),
 			line: lastImportLine + 1,
@@ -188,24 +234,37 @@ async function insertImportsIntoMain(
 	label: string,
 	{ imports }: { imports: string[] },
 ): Promise<void> {
-	const mainUri = await findUriMainFile(label, imports);
+	const mainFile = await findMainFile(label, imports);
 
-	if (!mainUri) {
+	if (!mainFile) {
 		return;
 	}
 
 	await insertImports({
-		uri: mainUri,
+		uri: mainFile.uri,
 		imports: imports,
 	});
+}
+
+async function dartFormat(path?: string, delayAfter?: number): Promise<void> {
+	const terminal = new TerminalService('Dart Format');
+
+	try {
+		// kalau gk ada path, maka format semua file
+		await terminal.executeAsync(`dart format ${path ?? '.'}`);
+		await new Promise((resolve) => setTimeout(resolve, delayAfter ?? 2_000)); // 2 detik
+	} finally {
+		terminal.dispose();
+	}
 }
 
 const FlutterUtils = {
 	getProjectName,
 	insertIntoMain,
 	insertImports,
-	findUriMainFile,
+	findMainFile,
 	insertImportsIntoMain,
+	dartFormat,
 };
 
 export default FlutterUtils;

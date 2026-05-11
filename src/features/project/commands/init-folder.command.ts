@@ -1,5 +1,6 @@
 import DartUtils from '@common/utils/dart.utils';
 import FileUtils from '@common/utils/file.utils';
+import PubspecUtils from '@common/utils/pubspec.utils';
 import { execScriptLauncherDev } from '@features/generate/commands/launcher-icon.command';
 import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
@@ -34,7 +35,11 @@ const _generate = async (terminal: TerminalService) => {
 				await copyingData();
 
 				progress.report({ increment: 30, message: 'Installing packages...' });
-				await initPubspec(terminal);
+				await PubspecUtils.init(terminal, {
+					assets: ProjectConstant.PubspecAssets,
+					devPackages: ProjectConstant.DevPackages,
+					packages: ProjectConstant.Packages,
+				});
 
 				progress.report({
 					increment: 30,
@@ -59,53 +64,6 @@ async function copyingData(): Promise<void> {
 		sourceFolder: 'templates/',
 		destFolder: '\\',
 	});
-}
-
-async function initPubspec(terminal: TerminalService): Promise<void> {
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders?.length) {
-		vscode.window.showErrorMessage('No workspace folder found.');
-		return;
-	}
-
-	const pubspecPath = vscode.Uri.joinPath(
-		workspaceFolders[0].uri,
-		'pubspec.yaml',
-	);
-
-	const isExists = await FileUtils.fileExists(pubspecPath, 'pubspec.yaml');
-	if (!isExists) {
-		return;
-	}
-
-	const doc = await vscode.workspace.openTextDocument(pubspecPath);
-	const originalText = doc.getText();
-
-	const cleanedText = originalText
-		.replace(/#.*/g, '')
-		.replace(/^\s*[\r\n]/gm, '\n')
-		.trim();
-
-	const missingAssets = ProjectConstant.PubspecAssets.filter(
-		(val) => !cleanedText.includes(val),
-	);
-
-	const finalText = `${cleanedText}\n  ${missingAssets.join('\n   ')}`;
-
-	const edit = new vscode.WorkspaceEdit();
-	const fullRange = new vscode.Range(
-		doc.positionAt(0),
-		doc.positionAt(originalText.length),
-	);
-
-	edit.replace(pubspecPath, fullRange, finalText);
-	await vscode.workspace.applyEdit(edit);
-	await doc.save();
-
-	terminal.execute(`flutter pub add ${ProjectConstant.Packages.join(' ')}`);
-	terminal.execute(
-		`flutter pub add -d ${ProjectConstant.DevPackages.join(' ')}`,
-	);
 }
 
 async function updateBuildGradleKts(): Promise<void> {

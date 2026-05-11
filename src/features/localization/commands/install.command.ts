@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { createLocalizationFiles } from './create-file.command';
+import { createLocalizationFiles } from '../create-files.utils';
 
 export async function installLocalization() {
 	vscode.window
@@ -19,8 +19,9 @@ export async function installLocalization() {
 
 	const input = await vscode.window.showInputBox({
 		title: 'Add Localization Languages',
-		placeHolder: 'Example: en,id,ja,en_US',
-		prompt: 'Enter multiple language codes separated by commas',
+		placeHolder: 'Example: en-US, id-ID, ja-JP',
+		prompt:
+			'Enter multiple language codes separated by commas (format: lang-COUNTRY)',
 		ignoreFocusOut: true,
 		validateInput: (value) => {
 			if (!value.trim()) {
@@ -28,9 +29,10 @@ export async function installLocalization() {
 			}
 
 			const codes = value.split(',').map((v) => v.trim());
-			const invalid = codes.filter((c) => !/^[a-z]{2}(_[A-Z]{2})?$/.test(c));
+
+			const invalid = codes.filter((c) => !/^[a-z]{2}-[A-Z]{2}$/.test(c));
 			if (invalid.length > 0) {
-				return `Invalid codes: ${invalid.join(', ')}`;
+				return `Invalid codes: ${invalid.join(', ')} — format must be: en-US, id-ID`;
 			}
 
 			return null;
@@ -42,13 +44,9 @@ export async function installLocalization() {
 	}
 
 	const codes = input.split(',').map((v) => {
-		const trimmed = v.trim();
-		const [lang, country] = trimmed.split('_');
-		return country
-			? `${lang.toLowerCase()}_${country.toUpperCase()}`
-			: lang.toLowerCase();
+		const [lang, country] = v.trim().split('-');
+		return `${lang.toLowerCase()}-${country.toUpperCase()}`;
 	});
 
-	vscode.window.showInformationMessage(`Adding languages: ${codes.join(', ')}`);
 	await createLocalizationFiles(codes);
 }

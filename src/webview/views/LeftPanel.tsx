@@ -1,7 +1,7 @@
 import { AppConstant } from '@common/constants/common.constants';
 import { CONTEXT_MENUS } from '@common/constants/menus/context-menu.constants';
 import { SIDEBAR_MENUS } from '@common/constants/menus/sidebar-menu.constants';
-import { getCachedImage } from '@common/utils/image-cache.utils';
+import ImageCacheUtils from '@common/utils/image-cache.utils';
 import { useEffect, useState } from 'react';
 import { Accordion } from '../components/Accordion';
 import Button from '../components/Button';
@@ -12,7 +12,7 @@ function LeftPanel() {
 	);
 
 	useEffect(() => {
-		getCachedImage(AppConstant.ExtensionLogoUrl).then(setExtensionLogo);
+		ImageCacheUtils.get(AppConstant.ExtensionLogoUrl).then(setExtensionLogo);
 	}, []);
 
 	const header = (

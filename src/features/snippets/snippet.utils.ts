@@ -1,8 +1,9 @@
 import { logger } from '@common/utils/logger.utils';
+import ValidationUtils from '@common/utils/validation.utils';
 import {
-    MetadataStorageSnippet,
-    SnippetInterface,
-    StorageSnippetInterface,
+  MetadataStorageSnippet,
+  SnippetInterface,
+  StorageSnippetInterface,
 } from '@features/snippets/types/snippet.types';
 import { TempFileService } from '@services/temp-file.service';
 import type { WebviewView } from 'vscode';
@@ -10,7 +11,6 @@ import * as vscode from 'vscode';
 import * as zlib from 'zlib';
 import { appContext } from '../../common/app-context';
 import { AppConstant } from '../../common/constants/common.constants';
-import { isValidInputBox } from '../../common/utils/validation.utils';
 import { ReturnBridgeWebview } from '../../webview/webview.constants';
 import { SnippetConstant } from './snippet.constants';
 
@@ -227,7 +227,8 @@ async function saveEditedSnippet({
 
 	const prefix = prefixLine.split(' ')[2].replaceAll('\r', '');
 
-	if (!isValidInputBox(prefix)) {
+	const isValid = ValidationUtils.snippetName(prefix);
+	if (!isValid) {
 		vscode.window.showErrorMessage('Invalid prefix');
 		return;
 	}
@@ -280,7 +281,9 @@ async function renameSnippetName({
 			if (!value) {
 				return 'Snippet name cannot be empty.';
 			}
-			if (!isValidInputBox(value)) {
+
+			const isValid = ValidationUtils.snippetName(value);
+			if (!isValid) {
 				return 'Invalid snippet name.';
 			}
 			return null;

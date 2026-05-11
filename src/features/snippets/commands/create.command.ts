@@ -1,8 +1,11 @@
 import { appContext } from '@common/app-context';
 import { WorkspaceInterface } from '@common/types/workspace.types';
-import { isValidInputBox } from '@common/utils/validation.utils';
+import ValidationUtils from '@common/utils/validation.utils';
 import SnippetUtils from '@features/snippets/snippet.utils';
-import { MetadataStorageSnippet, StorageSnippetInterface } from '@features/snippets/types/snippet.types';
+import {
+  MetadataStorageSnippet,
+  StorageSnippetInterface,
+} from '@features/snippets/types/snippet.types';
 import { ReturnBridgeWebview } from '@webview/webview.constants';
 import * as vscode from 'vscode';
 import { SnippetConstant } from '../snippet.constants';
@@ -39,7 +42,10 @@ export function createSnippet(context: vscode.ExtensionContext) {
 					if (!value) {
 						return 'Snippet name cannot be empty.';
 					}
-					if (!isValidInputBox(value)) {
+
+					const isValid = ValidationUtils.snippetName(value);
+
+					if (!isValid) {
 						return 'Invalid snippet name.';
 					}
 					return null;
@@ -98,7 +104,10 @@ async function saveNewSnippet(
 	vscode.window.showInformationMessage(`Snippet "${snippetName}" created!`);
 
 	const listSnippets = await SnippetUtils.readAllSnippets();
-	appContext.webview.postMessage(ReturnBridgeWebview.SnippetsData, listSnippets);
+	appContext.webview.postMessage(
+		ReturnBridgeWebview.SnippetsData,
+		listSnippets,
+	);
 }
 
 async function readExistingSnippets(

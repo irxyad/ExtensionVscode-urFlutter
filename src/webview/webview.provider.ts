@@ -50,7 +50,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
 			),
 		);
 
-		const nonce = FileUtils.getNonce();
+		const nonce = FileUtils.getCSP();
 
 		html = html.replace(
 			'<script src="main.js"></script>',

@@ -1,7 +1,7 @@
 import { appContext } from '@common/app-context';
 import { AppConstant } from '@common/constants/common.constants';
 import StorageKey from '@common/constants/storage-key.constants';
-import '@common/extensions/string.ext';
+import '@common/extensions/primitive.ext';
 import { logger } from '@common/utils/logger.utils';
 import { generateFromToEntity } from '@features/generate/commands/entity.command';
 import { initFolder } from '@features/project/commands/init-folder.command';

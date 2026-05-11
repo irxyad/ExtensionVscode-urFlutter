@@ -1,6 +1,6 @@
 import { appContext } from '@common/app-context';
 import { logger } from '@common/utils/logger.utils';
-import { isValidFlutterProjectName } from '@common/utils/validation.utils';
+import ValidationUtils from '@common/utils/validation.utils';
 import { spawn } from 'child_process';
 import path from 'path';
 import * as vscode from 'vscode';
@@ -24,7 +24,10 @@ export async function createFlutter(): Promise<void> {
 			if (!value) {
 				return 'Project name cannot be empty.';
 			}
-			if (!isValidFlutterProjectName(value)) {
+
+			const isValid = ValidationUtils.snippetName(value);
+
+			if (!isValid) {
 				return 'Use lowercase letters, numbers, and underscores only. Must start with a letter.';
 			}
 			return null;
