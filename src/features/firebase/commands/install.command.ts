@@ -1,3 +1,4 @@
+import { AppConstant } from '@common/constants/common.constants';
 import { handleError } from '@common/utils/error.utils';
 import FileUtils from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
@@ -160,20 +161,31 @@ function waitForFirebaseOptions(
 			fn();
 		};
 
-		const timeoutId = setTimeout(() => {
-			cleanup(() =>
-				reject(new Error('Timeout: firebase_options.dart not created')),
+		const handleTimeout = async () => {
+			cleanup(() => {});
+
+			const selection = await vscode.window.showWarningMessage(
+				`[${AppConstant.ExtensionName}] Unable to detect the status of flutterfire configure. The process may have completed or an error occurred during configuration. Do you want to continue the process?`,
+				{ modal: true },
+				'Continue',
+				'Cancel',
 			);
-		}, 120_000); // 120 detik
+
+			if (selection === 'Continue') {
+				resolve();
+			} else {
+				reject(new Error('User cancelled the flutterfire configure process'));
+			}
+		};
+
+		const timeoutId = setTimeout(() => handleTimeout(), 300_000); // 5 menit
 
 		const cancelListener = token.onCancellationRequested(() => {
 			cleanup(() => resolve());
 		});
 
-		// Kalau file belum ada, tunggu dibuat
 		watcher.onDidCreate(() => cleanup(() => resolve()));
 
-		// Kalau file sudah ada, tunggu diubah
 		if (isExist) {
 			watcher.onDidChange(() => cleanup(() => resolve()));
 		}
