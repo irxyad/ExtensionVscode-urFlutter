@@ -43,10 +43,10 @@ const messageHandlers: Partial<Record<string, MessageHandler>> = {
 	[SidebarMenu.Setup.Firebase.Install]: async () => {
 		await installFirebase();
 	},
-	[SidebarMenu.Setup.Localization.Install]: async () => {
+	[SidebarMenu.Localization.Install]: async () => {
 		await installOrAddLocalization(true);
 	},
-	[SidebarMenu.Setup.Localization.AddLocale]: async () => {
+	[SidebarMenu.Localization.AddLocale]: async () => {
 		await installOrAddLocalization(false);
 	},
 

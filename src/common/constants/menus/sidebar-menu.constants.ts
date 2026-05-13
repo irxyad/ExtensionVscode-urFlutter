@@ -17,11 +17,12 @@ export const SidebarMenu = {
 			Parent: 'firebase',
 			Install: 'install_firebase',
 		},
-		Localization: {
-			Parent: 'localization',
-			Install: 'install_localization',
-			AddLocale: 'add_locale',
-		},
+	},
+	Localization: {
+		Parent: 'localization',
+		Install: 'install_localization',
+		AddLocale: 'add_locale',
+		Generate: `${MENU_SCRIPT_PREFIX}_localization`,
 	},
 	Build: {
 		Parent: 'build',
@@ -38,7 +39,6 @@ export const SidebarMenu = {
 	Generate: {
 		Parent: 'generate',
 		BuildRunner: `generate_build_runner`,
-		Localization: `${MENU_SCRIPT_PREFIX}_localization`,
 		LauncherIcon: 'generate_launcher_icon',
 	},
 } as const;
@@ -48,7 +48,7 @@ export type SidebarMenuId =
 	| typeof SidebarMenu.InitFolder
 	| typeof SidebarMenu.Setup.Parent
 	| (typeof SidebarMenu.Setup.Firebase)[keyof typeof SidebarMenu.Setup.Firebase]
-	| (typeof SidebarMenu.Setup.Localization)[keyof typeof SidebarMenu.Setup.Localization]
+	| (typeof SidebarMenu.Localization)[keyof typeof SidebarMenu.Localization]
 	| (typeof SidebarMenu.Build)[keyof typeof SidebarMenu.Build]
 	| (typeof SidebarMenu.Scrcpy)[keyof typeof SidebarMenu.Scrcpy]
 	| (typeof SidebarMenu.Generate)[keyof typeof SidebarMenu.Generate];
@@ -76,19 +76,19 @@ const menuGroups = {
 		id: SidebarMenu.Setup.Firebase.Parent,
 		badgeColor: '#F59E0B',
 	},
-	Localization: {
-		id: SidebarMenu.Setup.Localization.Parent,
-		badgeColor: '#0cc5e6',
-	},
 } satisfies Record<string, SidebarMenuGroup>;
 
 export function getSidebarData(
 	id: SidebarMenuId,
 ): SidebarMenuData | SidebarMenuChild | undefined {
 	for (const menu of SIDEBAR_MENUS) {
-		if (menu.id === id) {return menu;}
+		if (menu.id === id) {
+			return menu;
+		}
 		const child = menu.children?.find((c) => c.id === id);
-		if (child) {return child;}
+		if (child) {
+			return child;
+		}
 	}
 }
 
@@ -99,22 +99,11 @@ export const SIDEBAR_MENUS: SidebarMenuData[] = [
 	},
 	{
 		id: SidebarMenu.Setup.Parent,
-		title: 'Setup or Add',
+		title: 'Setup',
 		children: [
 			{
-				group: menuGroups.Firebase,
 				id: SidebarMenu.Setup.Firebase.Install,
 				title: 'Setup Firebase',
-			},
-			{
-				group: menuGroups.Localization,
-				id: SidebarMenu.Setup.Localization.Install,
-				title: 'Setup Localization',
-			},
-			{
-				group: menuGroups.Localization,
-				id: SidebarMenu.Setup.Localization.AddLocale,
-				title: 'Add Locale',
 			},
 		],
 	},
@@ -127,6 +116,27 @@ export const SIDEBAR_MENUS: SidebarMenuData[] = [
 		],
 	},
 	{
+		id: SidebarMenu.Generate.Parent,
+		title: 'Generate',
+		children: [
+			{ id: SidebarMenu.Generate.BuildRunner, title: 'Generate Build Runner' },
+			{
+				id: SidebarMenu.Generate.LauncherIcon,
+				title: 'Generate Launcher Icon',
+			},
+		],
+	},
+	{
+		id: SidebarMenu.Localization.Parent,
+		title: 'Localization',
+		children: [
+			{ id: SidebarMenu.Localization.Install, title: 'Install Localization' },
+			{ id: SidebarMenu.Localization.AddLocale, title: 'Add Locale' },
+			{ id: SidebarMenu.Localization.Generate, title: 'Generate Localization' },
+		],
+	},
+
+	{
 		id: SidebarMenu.Scrcpy.Parent,
 		title: 'Scrcpy',
 		subtitle: '(Mirroring Android)',
@@ -135,15 +145,6 @@ export const SIDEBAR_MENUS: SidebarMenuData[] = [
 			{ id: SidebarMenu.Scrcpy.Install, title: 'Install Scrcpy' },
 			{ id: SidebarMenu.Scrcpy.EditCustomParams, title: 'Edit Custom Params' },
 			{ id: SidebarMenu.Scrcpy.Documentation, title: 'Documentation' },
-		],
-	},
-	{
-		id: SidebarMenu.Generate.Parent,
-		title: 'Generate',
-		children: [
-			{ id: SidebarMenu.Generate.BuildRunner, title: 'Generate Build Runner' },
-			{ id: SidebarMenu.Generate.Localization, title: 'Generate Localization' },
-			{ id: SidebarMenu.Generate.LauncherIcon, title: 'Generate Launcher Icon' },
 		],
 	},
 ];

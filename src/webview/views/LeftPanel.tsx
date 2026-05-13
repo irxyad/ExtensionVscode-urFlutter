@@ -51,6 +51,8 @@ function LeftPanel() {
 				<div className="list-sidebar-menus">
 					{SIDEBAR_MENUS.map((menu) => {
 						if (menu.children) {
+              menu.children.sort((a, b) => a.title.localeCompare(b.title));
+
 							const children: DropdownChildren[] =
 								menu.children.map((child) => ({
 									id: child.id,
