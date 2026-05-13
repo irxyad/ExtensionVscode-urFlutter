@@ -1,21 +1,24 @@
+import ProjectPath from '@common/constants/project-path.constants';
 import { AppError } from '@common/error/app.error';
-import FileUtils, { CreateResult } from '@common/utils/file.utils';
+import FileUtils from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
 import { logger } from '@common/utils/logger.utils';
 import PubspecUtils from '@common/utils/pubspec.utils';
 import { PseudoTerminalService } from '@services/pseudo-terminal.service';
 import { TerminalService } from '@services/terminal.service';
 
-const JSON_LOCALIZATION_PATH = 'assets/translations';
-const APP_LOCALIZATION_PATH = 'lib/core/constants/app_localizations.dart';
+const JSON_LOCALIZATION_PATH = ProjectPath.localization.jsonFolder;
+const APP_LOCALIZATION_PATH = ProjectPath.localization.appLocalization;
 
 const getLocaleName = (filename: string): string =>
 	filename.split('/').last.replace('.json', '');
 
 export async function createLocalizationFiles(
+	isInstalling: boolean,
 	languages: string[],
 ): Promise<void> {
-	const title = 'Install Localization';
+	const title = isInstalling ? 'Setup Localization' : 'Add Locale';
+
 	const terminal = new TerminalService(title);
 	const pseudo = new PseudoTerminalService(title);
 
@@ -27,7 +30,7 @@ export async function createLocalizationFiles(
 		return;
 	}
 
-	const results = await Promise.all(
+	const locales = await Promise.all(
 		languages.map((lang) =>
 			FileUtils.create({
 				filename: `${JSON_LOCALIZATION_PATH}/${lang}.json`,
@@ -36,98 +39,135 @@ export async function createLocalizationFiles(
 		),
 	);
 
-	const existingFiles = results
+	const existingLocales = locales
 		.filter((r) => r?.isExists)
 		.map((r) => getLocaleName(r!.filename));
 
-	if (existingFiles.length === results.length) {
+	const newLocales = locales
+		.filter((r) => !r?.isExists)
+		.map((r) => getLocaleName(r!.filename));
+
+	if (existingLocales.length === locales.length) {
 		pseudo.writeError(
-			`Locale (${existingFiles.join(', ')}) already exist. Aborted!`,
+			`Locale (${existingLocales.join(', ')}) already exist. Aborted!`,
 		);
 		return;
 	}
 
-	if (existingFiles.length > 0) {
+	if (existingLocales.length > 0) {
 		pseudo.writeWarning(
-			`Already exists: (${existingFiles.join(', ')}). Skipped!`,
+			`Already exists: (${existingLocales.join(', ')}). Skipped!`,
 		);
 	}
 
-	pseudo.writeSuccess(
-		`Created locale json: (${results.map((r) => getLocaleName(r!.filename)).join(', ')})`,
-	);
+	pseudo.writeSuccess(`Created locale json: (${newLocales.join(', ')})`);
 
-	await pseudo.multiAsyncFunction({
-		msgSuccess: 'Localization installed & configured!',
-		funcs: [
-			{
-				label: 'Adding package easy_localization',
-				funcs: (signal) =>
-					PubspecUtils.installPackages(terminal, ['easy_localization'], signal),
-			},
-			{
-				label: 'Adding translations in pubspec.yaml',
-				funcs: () => PubspecUtils.addAssets([`${JSON_LOCALIZATION_PATH}/`]),
-			},
-			{
-				label: 'Formatting pubspec.yaml',
-				funcs: () => PubspecUtils.format(),
-			},
-			{
-				label: 'Configuring app',
-				funcs: () => configureLocalizationStep(pseudo, results, getLocaleName),
-			},
-		],
-	});
+	const valueConfigure: ConfigureLocalizationStepOptions = {
+		pseudo,
+		isInstalling,
+		newLocales: newLocales,
+		getLocaleName,
+	};
+
+	if (isInstalling) {
+		await pseudo.multiAsyncFunction({
+			msgSuccess: 'Localization configured!',
+			funcs: [
+				{
+					label: 'Adding package easy_localization',
+					funcs: () =>
+						PubspecUtils.installPackages(terminal, ['easy_localization']),
+				},
+				{
+					label: 'Adding translations in pubspec.yaml',
+					funcs: () => PubspecUtils.addAssets([`${JSON_LOCALIZATION_PATH}/`]),
+				},
+				{
+					label: 'Formatting pubspec.yaml',
+					funcs: () => PubspecUtils.format(),
+				},
+				{
+					label: 'Configuring app',
+					funcs: () => configureLocalizationStep(valueConfigure),
+				},
+			],
+		});
+	}
+	// Ini jika add locale
+	else {
+		await pseudo.multiAsyncFunction({
+			msgSuccess: 'New locale added!',
+			funcs: [
+				{
+					label: 'Configuring app',
+					funcs: () => configureLocalizationStep(valueConfigure),
+				},
+			],
+		});
+	}
+}
+
+interface ConfigureLocalizationStepOptions {
+	pseudo: PseudoTerminalService;
+	isInstalling: boolean;
+	newLocales: string[];
+	getLocaleName: (f: string) => string;
 }
 
 // Extract
 async function configureLocalizationStep(
-	pseudo: PseudoTerminalService,
-	results: CreateResult[],
-	getLocaleName: (f: string) => string,
+	opt: ConfigureLocalizationStepOptions,
 ): Promise<string | void> {
-	const isInit = !(await FileUtils.isExists(APP_LOCALIZATION_PATH)).isExists;
+	const { pseudo, isInstalling, newLocales, getLocaleName } = opt;
 
-	if (isInit) {
-		const allFiles = await FileUtils.getFiles(JSON_LOCALIZATION_PATH);
-		const allLocales = allFiles.map(getLocaleName);
+	const hasAppLocalization = (await FileUtils.isExists(APP_LOCALIZATION_PATH))
+		.isExists;
 
-		if (allLocales.length > 0) {
-			await configurationApp(pseudo, true, allLocales);
+	// Kalau belum ada class AppLocalization
+	// maka kita ambil semua json di folder translation buat dimasukkin
+	// kalau sudah ada, maka ambil yang baru di created
+	const locales = !hasAppLocalization
+		? (await FileUtils.getFiles(JSON_LOCALIZATION_PATH)).map(getLocaleName)
+		: newLocales;
 
-			return `Locales created: ${allLocales.join(', ')}`;
-		}
-	} else {
-		const createdFiles = results
-			.filter((r) => r && !r.isExists)
-			.map((r) => getLocaleName(r!.filename));
-
-		if (createdFiles.length > 0) {
-			await configurationApp(pseudo, false, createdFiles);
-
-			return `Locales created: ${createdFiles.join(', ')}`;
-		}
+	if (!locales.length) {
+		throw new AppError('No locales found');
 	}
+
+	await configurationApp({
+		hasAppLocalization,
+		isInstalling,
+		locales: locales,
+		pseudo,
+	});
+
+	return `Locales created: ${locales.join(', ')}`;
 }
 
-async function configurationApp(
-	pseudo: PseudoTerminalService,
-	isInit: boolean,
-	locales: string[],
-) {
-	// Inject import dan EasyLocalization.ensureInitialized
-	try {
-		await injectToMain();
-	} catch (error) {
-		logger.error('Error Inject to main:', error);
+interface ConfigurationAppOptions {
+	pseudo: PseudoTerminalService;
+	isInstalling: boolean;
+	hasAppLocalization: boolean;
+	locales: string[];
+}
 
-		throw new AppError(`Failed to inject to main:`, error);
+async function configurationApp(opt: ConfigurationAppOptions) {
+	const { pseudo, isInstalling, hasAppLocalization, locales } = opt;
+
+	// Inject import dan EasyLocalization.ensureInitialized jika install
+	if (isInstalling) {
+		try {
+			await injectToMain();
+		} catch (error) {
+			logger.error('Error Inject to main:', error);
+
+			throw new AppError(`Failed to inject to main:`, error);
+		}
 	}
 
 	// Membuat file app_localizations
 	try {
-		await createAppLocalization(isInit, locales);
+		await createAppLocalization(hasAppLocalization, locales);
 	} catch (error) {
 		logger.error('Error Inject to main:', error);
 
@@ -135,7 +175,7 @@ async function configurationApp(
 	}
 
 	// Show instruksi jika pertama kali install
-	if (isInit) {
+	if (isInstalling) {
 		showInstructionToWrap(pseudo);
 	}
 }
@@ -231,11 +271,10 @@ function generateSupportedLocales(newLocales: string[]) {
 		.join(',\n');
 }
 
-async function createAppLocalization(isInit: boolean, locales: string[]) {
-	if (locales.isEmpty) {
-		return 'No localization files found.';
-	}
-
+async function createAppLocalization(
+	hasAppLocalization: boolean,
+	locales: string[],
+) {
 	const appLocalizationContent = [
 		'// GENERATED CODE - DO NOT MODIFY BY HAND',
 		'',
@@ -253,7 +292,7 @@ async function createAppLocalization(isInit: boolean, locales: string[]) {
 		'}',
 	].join('\n');
 
-	if (!isInit) {
+	if (hasAppLocalization) {
 		await FileUtils.edit({
 			filePath: APP_LOCALIZATION_PATH,
 			insertAt: {
@@ -264,15 +303,6 @@ async function createAppLocalization(isInit: boolean, locales: string[]) {
 				},
 			},
 		});
-		// Update supportedLocales list
-		// await FileUtils.updateLine({
-		// 	filePath: APP_LOCALIZATION_PATH,
-		// 	keyword: ['static const List<Locale> supportedLocales = [', '['],
-		// 	endKeyword: '];',
-		// 	newText: generateSupportedLocales([...oldLocales, ...newLocales]).join(
-		// 		'\n',
-		// 	),
-		// });
 
 		// Update supportedLocales
 		await FileUtils.edit({
@@ -289,6 +319,7 @@ async function createAppLocalization(isInit: boolean, locales: string[]) {
 		return;
 	}
 
+	// Jika belum ada, maka kita buat
 	await FileUtils.create({
 		filename: APP_LOCALIZATION_PATH,
 		data: appLocalizationContent,

@@ -1,5 +1,6 @@
 import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
+import * as yaml from 'yaml';
 import FileUtils from './file.utils';
 
 async function getPubspecDocument(): Promise<{
@@ -88,8 +89,16 @@ async function addAssets(assets: string[]): Promise<void> {
 		);
 	} else {
 		// Kalau belum ada assets: di dalam flutter: maka tambahkan setelah flutter:
+		let lastFlutterChildIndex = flutterLineIndex;
+		while (
+			lastFlutterChildIndex + 1 < lines.length &&
+			lines[lastFlutterChildIndex + 1].match(/^\s+/)
+		) {
+			lastFlutterChildIndex++;
+		}
+
 		lines.splice(
-			flutterLineIndex + 1,
+			lastFlutterChildIndex + 1,
 			0,
 			'  assets:',
 			...missingAssets.map((a) => `    - ${a}`),
@@ -149,11 +158,40 @@ async function format(): Promise<void> {
 	await applyPubspecEdit(result.join('\n'));
 }
 
+async function arePackagesInstalled(
+	packageNames: string[],
+): Promise<Record<string, boolean>> {
+	const result = await getPubspecDocument();
+
+	if (!result) {
+		return Object.fromEntries(packageNames.map((pkg) => [pkg, false]));
+	}
+
+	const { doc } = result;
+	const pubspec = yaml.parse(doc.getText());
+
+	const dependencies = {
+		...pubspec.dependencies,
+		...pubspec.dev_dependencies,
+	};
+
+	return Object.fromEntries(
+		packageNames.map((pkg) => [pkg, pkg in dependencies]),
+	);
+}
+
+async function isPackageInstalled(packageName: string): Promise<boolean> {
+	const results = await arePackagesInstalled([packageName]);
+	return results[packageName];
+}
+
 const PubspecUtils = {
 	addAssets,
 	installPackages,
 	installDevPackages,
 	format,
+	isPackageInstalled,
+	arePackagesInstalled,
 };
 
 export default PubspecUtils;
