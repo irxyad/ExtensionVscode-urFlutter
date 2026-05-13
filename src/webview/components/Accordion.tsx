@@ -1,10 +1,15 @@
-import { postMessageToExtension } from '@webview/utils/webview-bridge.utils';
+import '@common/extensions/primitive.ext';
+import { postMessageToExtension } from '@webview/utils/bridge.utils';
+import { hexToRgba } from '@webview/utils/color.utils';
 import { useState, type ReactNode } from 'react';
+
 
 export type DropdownChildren = {
 	id: string;
 	title: string;
 	subtitle?: string;
+	group?: string;
+	badgeColor?: string;
 };
 
 type AccordionProps = {
@@ -18,6 +23,7 @@ type AccordionProps = {
 	actionsChildren?: (val: DropdownChildren) => ReactNode[];
 	onClickChildren?: (val: DropdownChildren) => void;
 };
+
 export function Accordion({
 	id,
 	title,
@@ -31,49 +37,59 @@ export function Accordion({
 }: AccordionProps) {
 	const [isActive, setIsActive] = useState(false);
 
-	const handleHeaderClick = () => {
-		setIsActive(!isActive);
-	};
-
 	return (
 		<div className="accordion">
-			<div className={`accordion-item ${isActive ? 'active' : ''}`} key={id}>
+			<div className={`item ${isActive ? 'active' : ''}`} key={id}>
 				<div
-					className="accordion-header"
-					onClick={handleHeaderClick}
+					className="header"
+					onClick={() => setIsActive(!isActive)}
 					title={tooltip}>
-					<div className="accordion-header-title">
-						<div className="text-section ">
+					<div className="header-title">
+						<div className="text">
 							{title}
 							<div className="subtitle">{subtitle}</div>
 						</div>
 						{actions}
 					</div>
 				</div>
-				<div
-					className="accordion-content"
-					style={{ display: isActive ? 'block' : 'none' }}>
-					{children.map((val, index) => (
-						<div
-							id={val.id}
-							key={val.id}
-							className="accordion-content-item"
-							tabIndex={0}
-							role="button"
-							title={tooltipChildren ? tooltipChildren(index) : undefined}
-							onClick={() => {
-								if (onClickChildren) {
-									onClickChildren(val);
-								} else {
-									postMessageToExtension(val.id);
-								}
-							}}>
-							<p>{val.title}</p>
-							<div className="accordion-actions">
-								{actionsChildren ? actionsChildren(val) : null}
-							</div>
-						</div>
-					))}
+				<div className="content">
+					{children.map((val, index) => {
+            console.log('AAAAAAAA', val.group?.firstUppercase);
+
+            return (
+              <div
+                id={val.id}
+                key={val.id}
+                className="content-item"
+                tabIndex={0}
+                role="button"
+                title={tooltipChildren?.(index)}
+                onClick={() => onClickChildren
+                  ? onClickChildren(val)
+                  : postMessageToExtension(val.id)}>
+                <div className="child">
+                  <span>{val.title}</span>
+                  {val.group && (
+                    <span
+                      className="badge"
+                      style={val.badgeColor
+                        ? {
+                          backgroundColor: hexToRgba(val.badgeColor, 0.1),
+                          borderColor: val.badgeColor,
+                          border: '1px solid',
+                          color: val.badgeColor,
+                        }
+                        : {}}>
+                      {val.group.firstUppercase}
+                    </span>
+                  )}
+                </div>
+                {actionsChildren && (
+                  <div className="actions">{actionsChildren(val)}</div>
+                )}
+              </div>
+            );
+          })}
 				</div>
 			</div>
 		</div>

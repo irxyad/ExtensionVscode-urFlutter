@@ -62,7 +62,9 @@ footer .portfolio-link {
 	border-radius: 5px;
 	cursor: pointer;
 	text-align: start;
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
 }
 
 footer .portfolio-link:hover {
@@ -226,7 +228,9 @@ footer .portfolio-link:hover {
 	text-align: start;
 	border: none;
 	color: white;
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
 }
 
 .urflutter-button:hover {
@@ -243,7 +247,9 @@ footer .portfolio-link:hover {
 	padding: 10px 10px;
 	cursor: pointer;
 	text-align: start;
-	transition: background-color 0.3s ease, color 0.3s ease;
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease;
 }
 
 .urflutter-dropdown:hover {
@@ -358,17 +364,25 @@ footer .portfolio-link:hover {
 	color: rgb(2, 79, 179);
 }
 
-/* ACCORDION DI SNIPPET */
+/* ACCORDION COMPONENT  */
 .accordion {
+	width: 100%;
 	border-radius: 8px;
 	overflow: hidden;
+	margin: 0;
+	padding: 0;
 	background-color: #f0f0f027;
 }
 
-/* .accordion-item {
-} */
+.accordion .item.active .header::before {
+	transform: rotate(90deg);
+}
 
-.accordion-header {
+.accordion .item.active .content {
+	display: block;
+}
+
+.accordion .header {
 	padding: 12px;
 	font-size: 14px;
 	font-weight: 500;
@@ -378,7 +392,20 @@ footer .portfolio-link:hover {
 	align-items: start;
 }
 
-.accordion-header-title {
+.accordion .header::before {
+	content: '\276F';
+	display: inline-block;
+	font-size: 12px;
+	margin-right: 8px;
+	transition: transform 0.3s ease;
+}
+
+.accordion .header:hover {
+	background: #f1f1f1;
+	color: #000;
+}
+
+.accordion .header-title {
 	width: 90%;
 	display: flex;
 	flex-direction: row;
@@ -388,83 +415,67 @@ footer .portfolio-link:hover {
 	word-break: break-all;
 }
 
-.accordion-header:hover .btn-delete-group-snippet {
-	display: block;
+.accordion .text {
+	flex-direction: column;
+	word-break: keep-all;
 }
 
-.accordion-header:hover {
-	background: #f1f1f1;
-	color: #000;
+.accordion .subtitle {
+	font-size: smaller;
+	opacity: 0.7;
 }
 
-.accordion-header::before {
-	content: '\276F'; /* ❯ arrow kanan */
-	display: inline-block;
-	margin-right: 8px;
-	font-size: 14px;
-	transition: transform 0.3s ease;
-}
-
-.accordion-item.active .accordion-header::before {
-	transform: rotate(90deg); /* jadi panah bawah */
-}
-
-.accordion-content {
+.accordion .content {
 	display: none;
+	width: 100%;
 	font-size: 13px;
 	color: #fff;
 	background: #ffffff21;
 	gap: 10px;
+	padding: 8px 0px;
 }
 
-.accordion-item.active .accordion-content {
-	display: block;
-}
-
-.accordion-content-item {
+.accordion .content-item {
 	display: flex;
+	width: 100%;
 	align-items: center;
 	flex-direction: row;
 	gap: 10px;
 	justify-content: space-between;
-	padding: 1px 8px;
+	padding: 0;
 	margin: 0;
 	cursor: pointer;
 }
 
-.accordion-actions {
-	display: inline-flex; /* supaya ikut konten */
+.accordion .content-item:hover {
+	background: #f1f1f1;
+	color: #000;
+}
+
+.accordion .child {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	flex-direction: row;
+	padding: 10px;
+	gap: 10px;
+	justify-content: space-between;
+}
+
+.accordion .child .badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  margin: 0;
+  border-radius: 999px;
+  color: white;
+}
+
+.accordion .actions {
+	display: inline-flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
 	padding: 0;
 	margin: 10px 0;
-}
-
-.accordion-content-item:hover {
-	background: #f1f1f1;
-	color: #000;
-}
-
-.accordion-content-item:hover .btn-delete-snippet,
-.accordion-content-item:hover .btn-rename-snippet {
-	display: block;
-}
-
-.accordion-snippets {
-	display: flex;
-	flex-direction: column;
-	gap: 15px;
-}
-
-.accordion-header-title .text-section {
-	flex-direction: column;
-	/* white-space: normal; */
-	word-break: keep-all;
-}
-
-.text-section .subtitle {
-	font-size: smaller;
-	opacity: 0.7;
 }

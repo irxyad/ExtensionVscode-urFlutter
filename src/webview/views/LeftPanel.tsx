@@ -3,7 +3,7 @@ import { CONTEXT_MENUS } from '@common/constants/menus/context-menu.constants';
 import { SIDEBAR_MENUS } from '@common/constants/menus/sidebar-menu.constants';
 import ImageCacheUtils from '@common/utils/image-cache.utils';
 import { useEffect, useState } from 'react';
-import { Accordion } from '../components/Accordion';
+import { Accordion, DropdownChildren } from '../components/Accordion';
 import Button from '../components/Button';
 
 function LeftPanel() {
@@ -51,10 +51,19 @@ function LeftPanel() {
 				<div className="list-sidebar-menus">
 					{SIDEBAR_MENUS.map((menu) => {
 						if (menu.children) {
+							const children: DropdownChildren[] =
+								menu.children.map((child) => ({
+									id: child.id,
+									label: child.title,
+									title: child.title,
+									group: child.group?.id,
+									badgeColor: child.group?.badgeColor,
+								})) ?? [];
+
 							return (
 								<Accordion
 									key={menu.id}
-									children={menu.children}
+									children={children}
 									id={menu.id}
 									title={menu.title}
 									subtitle={menu.subtitle}

@@ -5,7 +5,7 @@ import { installFirebase } from '@features/firebase/commands/install.command';
 import buildLauncherIcon, {
   generateLauncherIcon,
 } from '@features/generate/commands/launcher-icon.command';
-import { installLocalization } from '@features/localization/commands/install.command';
+import { installOrAddLocalization } from '@features/localization/commands/install.command';
 import { buildFlutter } from '@features/project/commands/build.command';
 import { createFlutter } from '@features/project/commands/create.command';
 import { initFolder } from '@features/project/commands/init-folder.command';
@@ -30,28 +30,43 @@ import * as vscode from 'vscode';
 type MessageHandler = (message: any, webview: vscode.Webview) => Promise<void>;
 
 const messageHandlers: Partial<Record<string, MessageHandler>> = {
+	// Flutter
 	[SidebarMenu.GenerateFlutter]: async () => {
 		await createFlutter();
 	},
 	[SidebarMenu.InitFolder]: async () => {
 		await initFolder();
 	},
-	[SidebarMenu.Firebase.Install]: async () => {
+
+	// Install or Add
+	[SidebarMenu.Setup.Firebase.Install]: async () => {
 		await installFirebase();
 	},
+	[SidebarMenu.Setup.Localization.Install]: async () => {
+		await installOrAddLocalization(true);
+	},
+	[SidebarMenu.Setup.Localization.AddLocale]: async () => {
+		await installOrAddLocalization(false);
+	},
+
+	// Build
 	[SidebarMenu.Build.LauncherIcon]: async () => {
 		await buildLauncherIcon();
 	},
 	[SidebarMenu.Build.Project]: async () => {
 		await buildFlutter();
 	},
+
+	// Generate
 	[SidebarMenu.Generate.LauncherIcon]: async () => {
 		await generateLauncherIcon();
 	},
-	[SidebarMenu.Scrcpy.InstallScrcpy]: async () => {
+
+	// Scrcpy
+	[SidebarMenu.Scrcpy.Install]: async () => {
 		await installScrcpy();
 	},
-	[SidebarMenu.Scrcpy.RunScrcpy]: async () => {
+	[SidebarMenu.Scrcpy.Run]: async () => {
 		await runScrcpy();
 	},
 	[SidebarMenu.Scrcpy.EditCustomParams]: async () => {
@@ -62,9 +77,8 @@ const messageHandlers: Partial<Record<string, MessageHandler>> = {
 			vscode.Uri.parse('https://github.com/Genymobile/scrcpy/tree/master/doc'),
 		);
 	},
-	[SidebarMenu.Install.Localization]: async () => {
-		await installLocalization();
-	},
+
+	// Footer
 	[AppConstant.AboutMe]: async () => {
 		vscode.env.openExternal(
 			vscode.Uri.parse('https://irsyadizzulhaq-portfolio.vercel.app'),

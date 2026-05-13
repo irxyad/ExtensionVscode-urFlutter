@@ -1,6 +1,6 @@
 import { SnippetAction } from '@features/snippets/snippet.constants';
 import { DeleteorRenameSnippetProp, StorageSnippetInterface } from '@features/snippets/types/snippet.types';
-import { postMessageToExtension } from '@webview/utils/webview-bridge.utils';
+import { postMessageToExtension } from '@webview/utils/bridge.utils';
 import { useEffect, useState } from 'react';
 import { Accordion } from '../components/Accordion';
 import {

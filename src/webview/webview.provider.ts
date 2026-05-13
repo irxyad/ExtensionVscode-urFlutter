@@ -4,7 +4,7 @@ import { logger } from '@common/utils/logger.utils';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { handleWebviewMessage } from './utils/webview-message-handler.utils';
+import { handleWebviewMessage } from './utils/message-handler.utils';
 
 export class WebViewProvider implements vscode.WebviewViewProvider {
 	constructor(private context: vscode.ExtensionContext) {}

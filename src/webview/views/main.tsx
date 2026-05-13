@@ -1,4 +1,4 @@
-import { catchWebviewGlobalError } from '@webview/utils/webview-error-handler.utils';
+import { catchWebviewGlobalError } from '@webview/utils/error-handler.utils';
 import { createRoot } from 'react-dom/client';
 import '../../index.css';
 import App from './App';

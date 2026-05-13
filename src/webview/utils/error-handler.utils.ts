@@ -1,5 +1,5 @@
 import { ActionBridgeWebview } from '@webview/webview.constants';
-import { postMessageToExtension } from './webview-bridge.utils';
+import { postMessageToExtension } from './bridge.utils';
 
 export function catchWebviewGlobalError(): void {
 	window.onerror = (message, source, line, col, error) => {

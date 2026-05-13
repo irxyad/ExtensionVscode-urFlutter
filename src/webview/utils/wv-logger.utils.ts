@@ -1,4 +1,4 @@
-import { postMessageToExtension } from '@webview/utils/webview-bridge.utils';
+import { postMessageToExtension } from '@webview/utils/bridge.utils';
 import { ActionBridgeWebview } from '@webview/webview.constants';
 
 /**

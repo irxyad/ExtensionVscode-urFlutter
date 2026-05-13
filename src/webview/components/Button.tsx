@@ -1,4 +1,4 @@
-import { postMessageToExtension } from '@webview/utils/webview-bridge.utils';
+import { postMessageToExtension } from '@webview/utils/bridge.utils';
 
 type ButtonProps = {
 	id: string;
