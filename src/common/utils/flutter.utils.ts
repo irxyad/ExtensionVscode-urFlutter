@@ -1,3 +1,4 @@
+import { AppError } from '@common/error/app.error';
 import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
 import FileUtils from './file.utils';
@@ -36,20 +37,20 @@ async function getProjectName(): Promise<{ name: string; rawName: string }> {
 	const pubspec = await FileUtils.find('pubspec.yaml');
 
 	if (!pubspec) {
-		throw new Error("Can't find pubspec.yaml");
+		throw new AppError("Can't find pubspec.yaml");
 	}
 
 	const linesWithName = await FileUtils.findLines(pubspec, 'name');
 
 	if (!linesWithName?.length) {
-		throw new Error("No 'name' field found in pubspec.yaml");
+		throw new AppError("No 'name' field found in pubspec.yaml");
 	}
 
 	const nameLine = linesWithName.find((line) => /^name\s*:/.test(line.trim()));
 	const rawName = nameLine?.split(':')[1]?.trim();
 
 	if (!rawName) {
-		throw new Error('Invalid name format in pubspec.yaml');
+		throw new AppError('Invalid name format in pubspec.yaml');
 	}
 
 	const name = rawName
@@ -125,13 +126,13 @@ async function insertIntoMain(options: InsertIntoMainOptions): Promise<void> {
 
 	const mainFile = await findMainFile(options.label, options.instructions);
 	if (!mainFile) {
-		throw new Error('Cannot find main file');
+		throw new AppError('Cannot find main file');
 	}
 
 	// Ini untuk mencari baris void main
 	const lineMain = await findMainLine(mainFile.uri);
 	if (lineMain === null) {
-		throw new Error('Cannot find main() — add the code manually');
+		throw new AppError('Cannot find main() — add the code manually');
 	}
 
 	// Keyword sudah ada, skip insert
@@ -147,6 +148,21 @@ async function insertIntoMain(options: InsertIntoMainOptions): Promise<void> {
 
 	// Kita format dulu file main.dart dan beri delay 5s kemudian run dibawahnya
 	await dartFormat(mainFile.relativePath, 5_000);
+
+	const matchKeyword = await FileUtils.findLine(
+		mainFile.uri,
+		options.afterKeyword,
+	);
+
+	if (matchKeyword === null) {
+		const keywords = Array.isArray(options.afterKeyword)
+			? options.afterKeyword.join(', ')
+			: options.afterKeyword;
+
+		throw new AppError(
+			`Keyword not found: "${keywords}" in ${mainFile.uri.fsPath}`,
+		);
+	}
 
 	const hasAwaitAtInsertText = insertText.includes('await ');
 
@@ -169,11 +185,11 @@ async function insertIntoMain(options: InsertIntoMainOptions): Promise<void> {
 	const hasPrepend = prependLine !== null;
 
 	// Untuk mengecek apakah keyword yang dicari memiliki kata di baris void main
-	const matchKeyword = afterKeyword.includes(lineMain.keyword);
+	const matchKeywordLineMain = afterKeyword.includes(lineMain.keyword);
 
 	// Jika matchKeyword = true, kita sisipikan tepat di bawah line void main
 	// kalau gk berarti kita sisipkan setelah baris afterKeyword
-	const line = matchKeyword
+	const line = matchKeywordLineMain
 		? lineMain.line + 1
 		: {
 				afterKeyword: afterKeyword,

@@ -10,11 +10,21 @@ interface AsyncFunctionOptions {
 	msgError?: string;
 }
 
+interface MultiAsyncFunctionOptions {
+	label: string;
+	funcs: (signal: AbortSignal) => Promise<unknown>;
+	stopOnError?: boolean;
+	labelLoading?: string;
+	msgSuccess?: string;
+	msgError?: string;
+}
+
 export class PseudoTerminalService {
 	private pseudoTerminal?: vscode.Terminal;
 	private writeEmitter = new vscode.EventEmitter<string>();
 	private isReady = false;
 	private pendingWrites: string[] = [];
+	private abortController?: AbortController;
 
 	private readonly C = {
 		reset: '\x1b[0m',
@@ -35,6 +45,10 @@ export class PseudoTerminalService {
 
 	constructor(private label = DEFAULT_LABEL) {}
 
+	get signal(): AbortSignal | undefined {
+		return this.abortController?.signal;
+	}
+
 	private getOrCreate(): vscode.Terminal {
 		if (this.pseudoTerminal && !this.pseudoTerminal.exitStatus) {
 			return this.pseudoTerminal;
@@ -49,16 +63,23 @@ export class PseudoTerminalService {
 			open: () => {
 				this.isReady = true;
 				this.writeEmitter.fire('\x1b[2J\x1b[3J\x1b[H');
-
 				for (const text of this.pendingWrites) {
 					this.writeEmitter.fire(text);
 				}
-
 				this.pendingWrites = [];
 			},
 
 			close: () => {
 				this.isReady = false;
+			},
+
+			handleInput: (data: string) => {
+				// Ctrl+C
+				if (data === '\x03') {
+					this.abortController?.abort();
+					this.stopLoading();
+					this.writeWarning('Cancelled by user (Ctrl+C)');
+				}
 			},
 		};
 
@@ -102,10 +123,6 @@ export class PseudoTerminalService {
 		this.write(`\n\u001b[3m\u001b[38;2;220;120;255m${text}\u001b[0m\n`);
 	}
 
-	writeDivider(): void {
-		this.write(`${this.C.muted}${'─'.repeat(40)}${this.C.reset}\n`);
-	}
-
 	writeSuccess(text: string): void {
 		const { bold, success, white, reset } = this.C;
 		this.write(`${bold}${success}✔${reset} ${white}${text}${reset}\n`);
@@ -123,6 +140,7 @@ export class PseudoTerminalService {
 
 	writeInfo(text: string): void {
 		const { bold, info, reset } = this.C;
+
 		this.write(`${bold}${info}ℹ${reset} ${info}${text}${reset}\n`);
 	}
 
@@ -161,7 +179,7 @@ export class PseudoTerminalService {
 				this.SPINNER_COLORS[frame % this.SPINNER_COLORS.length];
 
 			this.writeEmitter.fire(
-				`\r${spinnerColor}${this.C.bold}${spinner}${this.C.reset} ${this.C.white}${message}${this.C.reset}   `,
+				`\r${spinnerColor}${this.C.bold}${spinner}${this.C.reset} ${this.C.white}${message}${this.C.reset}  ${this.C.muted}ctrl+c to cancel${this.C.reset}   `,
 			);
 
 			frame++;
@@ -176,7 +194,11 @@ export class PseudoTerminalService {
 		}
 	}
 
-	async asyncFunction(options: AsyncFunctionOptions): Promise<void> {
+	async asyncFunction({
+		options,
+	}: {
+		options: AsyncFunctionOptions;
+	}): Promise<void> {
 		const { title, func, labelLoading, msgSuccess, msgError } = options;
 
 		this.getOrCreate().show(true);
@@ -201,6 +223,101 @@ export class PseudoTerminalService {
 
 			this.writeError(`${error}`);
 		}
+	}
+
+	async multiAsyncFunction({
+		funcs,
+		msgSuccess,
+		stopOnError = true,
+	}: {
+		funcs: MultiAsyncFunctionOptions[];
+		msgSuccess?: string;
+		stopOnError?: boolean;
+	}): Promise<void> {
+		this.getOrCreate().show(true);
+		this.abortController = new AbortController();
+		let hasError = false;
+		let currentIndex = 0;
+
+		for (const option of funcs) {
+			if (this.abortController.signal.aborted) {
+				break;
+			}
+
+			const txtLoading = option.labelLoading ?? `Loading ${option.label}…`;
+			const txtSuccess = option.msgSuccess ?? `Done ${option.label}`;
+
+			this.startLoading(txtLoading);
+
+			try {
+				const result = await option.funcs(this.abortController.signal);
+
+				this.stopLoading();
+
+				if (this.abortController.signal.aborted) {
+					break;
+				}
+
+				const successMsg = typeof result === 'string' ? result : txtSuccess;
+				this.writeSuccess(successMsg);
+				currentIndex++;
+			} catch (error) {
+				this.stopLoading();
+
+				if (this.abortController.signal.aborted) {
+					break;
+				}
+        const isInstanceError=error instanceof Error;
+
+				const txtError = option.msgError ?? `Error ${option.label}: ${isInstanceError?error.message:error}`;
+				this.writeError(txtError);
+				hasError = true;
+				currentIndex++;
+
+				if (option.stopOnError ?? stopOnError) {
+					break;
+				}
+			}
+		}
+
+		if (this.abortController.signal.aborted) {
+			const skipped = funcs.slice(currentIndex);
+
+			skipped.forEach((opt) => {
+				this.write(`${this.C.muted}  Skipped ${opt.label}${this.C.reset}\n`);
+			});
+			return;
+		}
+
+		if (!hasError) {
+			this.writeSuccess(msgSuccess ?? 'Done!');
+		} else {
+			this.writeError('Completed with errors.');
+		}
+	}
+
+	writeInstruction(label: string, instructions: string[]): void {
+		const { muted, bold, white, reset, info, title } = this.C;
+		const divider = `${muted}${'─'.repeat(45)}${reset}`;
+
+		this.write('\n');
+		this.write(`${divider}\n`);
+		this.write(`${bold}${title} ${label}${reset}\n`);
+		this.write(`${divider}\n`);
+		this.write('\n');
+
+		for (const line of instructions) {
+			// Baris code (indent dengan spasi)
+			if (line.startsWith('   ')) {
+				this.write(`${info}${line}${reset}\n`);
+			} else if (line === '') {
+				this.write('\n');
+			} else {
+				this.write(`${white}${line}${reset}\n`);
+			}
+		}
+
+		this.write('\n');
 	}
 
 	dispose(): void {

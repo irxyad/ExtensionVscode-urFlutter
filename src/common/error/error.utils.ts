@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { logger } from './logger.utils';
+import { logger } from '../utils/logger.utils';
 
 export function getErrorMessage(error: unknown): string {
 	if (error instanceof Error) {

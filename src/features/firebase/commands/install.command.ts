@@ -1,5 +1,5 @@
 import { AppConstant } from '@common/constants/common.constants';
-import { handleError } from '@common/utils/error.utils';
+import { handleError } from '@common/error/error.utils';
 import FileUtils from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
 import ProjectUtils from '@common/utils/project.utils';

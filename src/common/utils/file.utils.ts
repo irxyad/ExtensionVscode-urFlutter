@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { AppConstant } from '../constants/common.constants';
 import ProjectUtils from './project.utils';
 
-interface editOptions {
+interface EditOptions {
 	filePath: string;
 	// Text yang akan ditambah di akhir file
 	appendText?: string;
@@ -26,12 +26,12 @@ interface IsExistsFileResult {
 	uri: vscode.Uri | null;
 }
 
-interface createOptions {
+interface CreateOptions {
 	filename: string;
 	data?: string;
 }
 
-interface createResult {
+export interface CreateResult {
 	filePath: string;
 	filename: string;
 	isExists: boolean;
@@ -77,7 +77,7 @@ async function isExistsFile(filename: string): Promise<IsExistsFileResult> {
  *   - `last` — jika `true`, maka disisipkan setelah `afterKeyword` terakhir
  */
 async function edit(
-	options: editOptions,
+	options: EditOptions,
 ): Promise<{ totalLines: number } | null> {
 	const { filePath, appendText, insertAt } = options;
 
@@ -132,24 +132,13 @@ async function edit(
 				) {
 					const { afterKeyword, last = false } = insertAt.line;
 
-					if (afterKeyword instanceof Array) {
-						for (let i = 0; i < afterKeyword.length; i++) {
-							const val = afterKeyword[i];
+					const keywords = Array.isArray(afterKeyword)
+						? afterKeyword
+						: [afterKeyword];
 
-							const line = last
-								? await FileUtils.findLastLine(uri, val)
-								: await FileUtils.findLine(uri, val);
-
-							if (line !== null) {
-								keywordLine = line;
-								break;
-							}
-						}
-					} else {
-						keywordLine = last
-							? await FileUtils.findLastLine(uri, afterKeyword)
-							: await FileUtils.findLine(uri, afterKeyword);
-					}
+					keywordLine = last
+						? await FileUtils.findLastLine(uri, keywords)
+						: await FileUtils.findLine(uri, keywords);
 
 					if (keywordLine === null) {
 						const keywordLabel =
@@ -225,46 +214,46 @@ function getCSP() {
  */
 async function findLine(
 	uri: vscode.Uri,
-	keyword: string,
-	occurrenceIndex = 0,
+	keywords: string | string[],
+	occurrenceIndex = 0, // kalau 0 berarti ngereturn baris pertama yang didapat
 ): Promise<number | null> {
 	const doc = await vscode.workspace.openTextDocument(uri);
 	const lines = doc.getText().split('\n');
+	const keywordList = Array.isArray(keywords) ? keywords : [keywords];
 
-	// Cari semua line yang mengandung keyword
-	const matchingLines: number[] = [];
+	for (const keyword of keywordList) {
+		const matchingLines: number[] = [];
 
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
-			matchingLines.push(i);
+		for (let i = 0; i < lines.length; i++) {
+			if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
+				matchingLines.push(i);
+			}
+		}
+
+		if (occurrenceIndex < matchingLines.length) {
+			return matchingLines[occurrenceIndex];
 		}
 	}
 
-	// Kalau jumlah ditemukan lebih sedikit dari yang diminta, return null
-	if (occurrenceIndex >= matchingLines.length) {
-		return null;
-	}
-
-	return matchingLines[occurrenceIndex];
+	return null;
 }
 
 /**
  * @returns List baris yang mengandung keyword
  */
-async function findLines(uri: vscode.Uri, keyword: string): Promise<string[]> {
+async function findLines(
+	uri: vscode.Uri,
+	keywords: string | string[],
+): Promise<string[]> {
 	const doc = await vscode.workspace.openTextDocument(uri);
 	const lines = doc.getText().split('\n');
+	const keywordList = Array.isArray(keywords) ? keywords : [keywords];
 
-	// Cari semua line yang mengandung keyword
-	const matchingLines: string[] = [];
-
-	for (let i = 0; i < lines.length; i++) {
-		if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
-			matchingLines.push(lines[i]);
-		}
-	}
-
-	return matchingLines;
+	return lines.filter((line) =>
+		keywordList.some((keyword) =>
+			line.toLowerCase().includes(keyword.toLowerCase()),
+		),
+	);
 }
 
 /**
@@ -272,19 +261,26 @@ async function findLines(uri: vscode.Uri, keyword: string): Promise<string[]> {
  */
 async function findLastLine(
 	uri: vscode.Uri,
-	keyword: string,
+	keywords: string[],
 ): Promise<number | null> {
 	const document = await vscode.workspace.openTextDocument(uri);
+	const keywordList = Array.isArray(keywords) ? keywords : [keywords];
 
-	let lastLine: number | null = null;
+	for (const keyword of keywordList) {
+		let lastLine: number | null = null;
 
-	for (let i = 0; i < document.lineCount; i++) {
-		if (document.lineAt(i).text.includes(keyword)) {
-			lastLine = i;
+		for (let i = 0; i < document.lineCount; i++) {
+			if (document.lineAt(i).text.includes(keyword)) {
+				lastLine = i;
+			}
+		}
+
+		if (lastLine !== null) {
+			return lastLine;
 		}
 	}
 
-	return lastLine;
+	return null;
 }
 
 /**
@@ -364,7 +360,7 @@ async function deleteFiles(pattern: string): Promise<void> {
  * @param data - Text yang ingin dimasukkan ke file
  * @returns `filePath` full path file, `filename` nama file, `isExists` apakah file sudah ada
  */
-async function create(options: createOptions): Promise<createResult> {
+async function create(options: CreateOptions): Promise<CreateResult> {
 	const { filename, data = '' } = options;
 
 	const projectUri = ProjectUtils.getUri();

@@ -42,7 +42,7 @@ export class TerminalService {
 	 */
 	executeAsync(
   command: string,
-  options?: ExecOptions & { timeoutMs?: number },
+  options?: ExecOptions & { timeoutMs?: number; signal?: AbortSignal },
 ): Promise<{ stdout: string; stderr: string }> {
   const cwd =
     options?.cwd ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -52,7 +52,11 @@ export class TerminalService {
   }
 
   return new Promise((resolve, reject) => {
-    const timeoutMs = options?.timeoutMs ?? 60_000; // 60 detik
+    if (options?.signal?.aborted) {
+      return reject(new Error('Aborted'));
+    }
+
+    const timeoutMs = options?.timeoutMs ?? 60_000; // 1 menit
 
     const childProcess = exec(
       command,
@@ -71,11 +75,17 @@ export class TerminalService {
       },
     );
 
-    // Timeout handler untuk mencegah proses yang menggantung tanpa batas waktu
     const timer = setTimeout(() => {
       childProcess.kill();
       reject(new Error(`Command timed out after ${timeoutMs}ms: ${command}`));
     }, timeoutMs);
+
+    // Untuk mengecek apakah user membatalkan proses
+    options?.signal?.addEventListener('abort', () => {
+      clearTimeout(timer);
+      childProcess.kill();
+      reject(new Error('Aborted'));
+    });
 
     childProcess.stderr?.on('data', (data: string) => {
       logger.warn(`[${this.label}] stderr:`, data);

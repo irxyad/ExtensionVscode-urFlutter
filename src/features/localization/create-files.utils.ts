@@ -1,126 +1,146 @@
-import FileUtils from '@common/utils/file.utils';
+import { AppError } from '@common/error/app.error';
+import FileUtils, { CreateResult } from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
 import { logger } from '@common/utils/logger.utils';
 import PubspecUtils from '@common/utils/pubspec.utils';
+import { PseudoTerminalService } from '@services/pseudo-terminal.service';
 import { TerminalService } from '@services/terminal.service';
-import * as vscode from 'vscode';
 
 const JSON_LOCALIZATION_PATH = 'assets/translations';
 const APP_LOCALIZATION_PATH = 'lib/core/constants/app_localizations.dart';
 
+const getLocaleName = (filename: string): string =>
+	filename.split('/').last.replace('.json', '');
+
 export async function createLocalizationFiles(
 	languages: string[],
 ): Promise<void> {
-	const terminal = new TerminalService('Install Localization');
+	const title = 'Install Localization';
+	const terminal = new TerminalService(title);
+	const pseudo = new PseudoTerminalService(title);
 
-	await vscode.window.withProgress(
-		{
-			location: vscode.ProgressLocation.Notification,
-			title: 'Install Localization',
-			cancellable: true,
-		},
-		async (progress, token) => {
-			token.onCancellationRequested(() => {
-				vscode.window.showWarningMessage(
-					'Localization installation cancelled.',
-				);
-			});
+	pseudo.show();
+	pseudo.writeTitle(title);
 
-			try {
-				if (token.isCancellationRequested) {
-					return;
-				}
+	if (languages.length === 0) {
+		pseudo.writeError('No languages selected for localization.');
+		return;
+	}
 
-				if (languages.length === 0) {
-					vscode.window.showInformationMessage(
-						'No languages selected for localization.',
-					);
-					return;
-				}
-
-				progress.report({ message: 'Creating files...' });
-				const results = await Promise.all(
-					languages.map((lang) =>
-						FileUtils.create({
-							filename: `${JSON_LOCALIZATION_PATH}/${lang}.json`,
-							data: '{}',
-						}),
-					),
-				);
-
-				const getLocaleName = (filename: string) => {
-					const parts = filename.split('/');
-					return parts.last.replace('.json', '');
-				};
-
-				const existingFiles = results
-					.filter((r) => r && r.isExists)
-					.map((r) => getLocaleName(r!.filename));
-
-				if (existingFiles.length === results.length) {
-					vscode.window.showErrorMessage(
-						`Locale (${existingFiles.join(', ')}) already exist. Aborted!`,
-					);
-					return;
-				}
-
-				if (existingFiles.length > 0) {
-					vscode.window.showWarningMessage(
-						`Already exists: (${existingFiles.join(', ')}). Skipped!`,
-					);
-				}
-
-				progress.report({ message: 'Adding package easy_localization...' });
-				await PubspecUtils.installPackages(terminal, ['easy_localization']);
-
-				progress.report({ message: 'Adding translations in pubspec.yaml...' });
-				await PubspecUtils.addAssets([`${JSON_LOCALIZATION_PATH}/`]);
-
-				progress.report({ message: 'Formatting pubspec.yaml...' });
-				await PubspecUtils.format();
-
-				progress.report({ message: 'Configuring app...' });
-				const isInit = !(await FileUtils.isExists(APP_LOCALIZATION_PATH))
-					.isExists;
-
-				if (isInit) {
-					const allFiles = await FileUtils.getFiles(JSON_LOCALIZATION_PATH);
-
-					const allLocales = allFiles.map((f) => getLocaleName(f));
-					if (allLocales.length > 0) {
-						await configurationApp(true, allLocales);
-
-						vscode.window.showInformationMessage(
-							`Created: ${allLocales.join(', ')}`,
-						);
-					}
-				} else {
-					const createdFiles = results
-						.filter((r) => r && !r.isExists)
-						.map((r) => getLocaleName(r!.filename));
-
-					if (createdFiles.length > 0) {
-						await configurationApp(false, createdFiles);
-
-						vscode.window.showInformationMessage(
-							`Created: ${createdFiles.join(', ')}`,
-						);
-					}
-				}
-
-				vscode.window.showInformationMessage(
-					'Localization installed & configured!',
-				);
-			} catch (err) {
-				if (!token.isCancellationRequested) {
-					vscode.window.showErrorMessage(`Localization setup failed: ${err}`);
-				}
-			}
-		},
+	const results = await Promise.all(
+		languages.map((lang) =>
+			FileUtils.create({
+				filename: `${JSON_LOCALIZATION_PATH}/${lang}.json`,
+				data: '{}',
+			}),
+		),
 	);
+
+	const existingFiles = results
+		.filter((r) => r?.isExists)
+		.map((r) => getLocaleName(r!.filename));
+
+	if (existingFiles.length === results.length) {
+		pseudo.writeError(
+			`Locale (${existingFiles.join(', ')}) already exist. Aborted!`,
+		);
+		return;
+	}
+
+	if (existingFiles.length > 0) {
+		pseudo.writeWarning(
+			`Already exists: (${existingFiles.join(', ')}). Skipped!`,
+		);
+	}
+
+	pseudo.writeSuccess(
+		`Created locale json: (${results.map((r) => getLocaleName(r!.filename)).join(', ')})`,
+	);
+
+	await pseudo.multiAsyncFunction({
+		msgSuccess: 'Localization installed & configured!',
+		funcs: [
+			{
+				label: 'Adding package easy_localization',
+				funcs: (signal) =>
+					PubspecUtils.installPackages(terminal, ['easy_localization'], signal),
+			},
+			{
+				label: 'Adding translations in pubspec.yaml',
+				funcs: () => PubspecUtils.addAssets([`${JSON_LOCALIZATION_PATH}/`]),
+			},
+			{
+				label: 'Formatting pubspec.yaml',
+				funcs: () => PubspecUtils.format(),
+			},
+			{
+				label: 'Configuring app',
+				funcs: () => configureLocalizationStep(pseudo, results, getLocaleName),
+			},
+		],
+	});
 }
 
-async function showInstructionToWrap() {
+// Extract
+async function configureLocalizationStep(
+	pseudo: PseudoTerminalService,
+	results: CreateResult[],
+	getLocaleName: (f: string) => string,
+): Promise<string | void> {
+	const isInit = !(await FileUtils.isExists(APP_LOCALIZATION_PATH)).isExists;
+
+	if (isInit) {
+		const allFiles = await FileUtils.getFiles(JSON_LOCALIZATION_PATH);
+		const allLocales = allFiles.map(getLocaleName);
+
+		if (allLocales.length > 0) {
+			await configurationApp(pseudo, true, allLocales);
+
+			return `Locales created: ${allLocales.join(', ')}`;
+		}
+	} else {
+		const createdFiles = results
+			.filter((r) => r && !r.isExists)
+			.map((r) => getLocaleName(r!.filename));
+
+		if (createdFiles.length > 0) {
+			await configurationApp(pseudo, false, createdFiles);
+
+			return `Locales created: ${createdFiles.join(', ')}`;
+		}
+	}
+}
+
+async function configurationApp(
+	pseudo: PseudoTerminalService,
+	isInit: boolean,
+	locales: string[],
+) {
+	// Inject import dan EasyLocalization.ensureInitialized
+	try {
+		await injectToMain();
+	} catch (error) {
+		logger.error('Error Inject to main:', error);
+
+		throw new AppError(`Failed to inject to main:`, error);
+	}
+
+	// Membuat file app_localizations
+	try {
+		await createAppLocalization(isInit, locales);
+	} catch (error) {
+		logger.error('Error Inject to main:', error);
+
+		throw new AppError(`Failed to create app_localizations:`, error);
+	}
+
+	// Show instruksi jika pertama kali install
+	if (isInit) {
+		showInstructionToWrap(pseudo);
+	}
+}
+
+async function showInstructionToWrap(pseudo: PseudoTerminalService) {
 	const projectName = await FlutterUtils.getProjectName();
 	const importPath = `package:${projectName.rawName}/${APP_LOCALIZATION_PATH.split('/').slice(1).join('/')}`;
 
@@ -149,34 +169,7 @@ async function showInstructionToWrap() {
 		'   )',
 	];
 
-	logger.instruction('Localization Setup', instructions);
-}
-
-async function configurationApp(isInit: boolean, locales: string[]) {
-	// Inject import dan EasyLocalization.ensureInitialized
-	try {
-		await injectToMain();
-	} catch (error) {
-		vscode.window.showErrorMessage(`Failed to inject to main: ${error}`);
-		logger.error('Error Inject to main:', error);
-		return;
-	}
-
-	// Membuat file app_localizations
-	try {
-		await createAppLocalization(isInit, locales);
-	} catch (error) {
-		vscode.window.showErrorMessage(
-			`Failed to create app_localizations: ${error}`,
-		);
-		logger.error('Error Inject to main:', error);
-		return;
-	}
-
-	// Show instruksi jika pertama kali install
-	if (isInit) {
-		showInstructionToWrap();
-	}
+	pseudo.writeInstruction('Localization Setup', instructions);
 }
 
 async function injectToMain() {
@@ -184,7 +177,7 @@ async function injectToMain() {
 		label: 'Localization Setup',
 		detectKeyword: 'EasyLocalization.ensureInitialized',
 		insertText: 'await EasyLocalization.ensureInitialized();',
-		afterKeyword: 'WidgetsFlutterBinding.ensureInitialized',
+		afterKeyword: ['WidgetsFlutterBinding.ensureInitialized', 'main('],
 		prependText: '  WidgetsFlutterBinding.ensureInitialized();',
 	});
 
@@ -240,8 +233,7 @@ function generateSupportedLocales(newLocales: string[]) {
 
 async function createAppLocalization(isInit: boolean, locales: string[]) {
 	if (locales.isEmpty) {
-		vscode.window.showInformationMessage('No localization files found.');
-		return;
+		return 'No localization files found.';
 	}
 
 	const appLocalizationContent = [
