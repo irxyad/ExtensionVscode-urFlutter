@@ -20,7 +20,7 @@ export async function installOrAddLocalization(isInstalling: boolean) {
 		const isLocalizationSetup = hasPackageLocalization && hasFolderTranslation;
 
 		if (!isLocalizationSetup) {
-			const sidebarLocalization = SidebarMenu.InstallOrAdd.Localization;
+			const sidebarLocalization = SidebarMenu.Setup.Localization.Install;
 			const sidebarLocalName = getSidebarData(sidebarLocalization);
 
 			vscode.window.showErrorMessage(

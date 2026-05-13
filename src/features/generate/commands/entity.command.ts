@@ -5,7 +5,8 @@ import * as vscode from 'vscode';
 const infoChannel = vscode.window.createOutputChannel('Generate Info');
 
 const _generate = async (classModel: string, uri: vscode.Uri) => {
-  const nameModel = DartUtils.getNameModel(classModel.split('\n')[0]);
+  const nameModel = DartUtils.getNameClass(classModel.split('\n')[0]);
+
   if (!nameModel) {
     vscode.window.showErrorMessage('Could not determine model name.');
     return;
@@ -54,7 +55,7 @@ export const generateFromToEntity = vscode.commands.registerCommand(
   'extension.generateFromToEntity',
   async (uri: vscode.Uri) => {
     try {
-      const classModels = DartUtils.extractAllClass(await FileUtils.getText(uri));
+      const classModels = DartUtils.extractAllClass(await FileUtils.read(uri));
 
       if (!classModels?.length) {
         vscode.window.showErrorMessage('No class found.');

@@ -37,7 +37,7 @@ export const SidebarMenu = {
 	},
 	Generate: {
 		Parent: 'generate',
-		BuildRunner: `${MENU_SCRIPT_PREFIX}_build_runner`,
+		BuildRunner: `generate_build_runner`,
 		Localization: `${MENU_SCRIPT_PREFIX}_localization`,
 		LauncherIcon: 'generate_launcher_icon',
 	},

@@ -2,6 +2,7 @@ import { AppConstant } from '@common/constants/common.constants';
 import { SidebarMenu } from '@common/constants/menus/sidebar-menu.constants';
 import { logger } from '@common/utils/logger.utils';
 import { installFirebase } from '@features/firebase/commands/install.command';
+import { buildRunner } from '@features/generate/commands/build-runner.command';
 import buildLauncherIcon, {
   generateLauncherIcon,
 } from '@features/generate/commands/launcher-icon.command';
@@ -60,6 +61,9 @@ const messageHandlers: Partial<Record<string, MessageHandler>> = {
 	// Generate
 	[SidebarMenu.Generate.LauncherIcon]: async () => {
 		await generateLauncherIcon();
+	},
+	[SidebarMenu.Generate.BuildRunner]: async () => {
+		await buildRunner();
 	},
 
 	// Scrcpy

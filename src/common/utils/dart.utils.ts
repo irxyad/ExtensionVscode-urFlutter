@@ -191,6 +191,7 @@ const DartUtils = {
 	changeNameModelToNameEntity,
 	extractAllClass,
 	insertTextInClass,
+  getNameClass,
 };
 
 export default DartUtils;
