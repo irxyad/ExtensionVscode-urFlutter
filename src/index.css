@@ -327,7 +327,6 @@ footer .portfolio-link:hover {
 .btn-delete-group-snippet,
 .btn-delete-snippet,
 .btn-rename-snippet {
-	display: none;
 	background: #bebebe9c;
 	margin: 0;
 	width: 20px;
@@ -374,9 +373,7 @@ footer .portfolio-link:hover {
 	background-color: #f0f0f027;
 }
 
-.accordion .item.active .header::before {
-	transform: rotate(90deg);
-}
+
 
 .accordion .item.active .content {
 	display: block;
@@ -392,7 +389,17 @@ footer .portfolio-link:hover {
 	align-items: start;
 }
 
-.accordion .header::before {
+.accordion .section-title{
+  display: flex;
+  gap: 1px;
+  flex: 1;
+	align-items: center;
+}
+
+.accordion .item.active .section-title::before {
+	transform: rotate(90deg);
+}
+.accordion .section-title::before {
 	content: '\276F';
 	display: inline-block;
 	font-size: 12px;
@@ -406,7 +413,7 @@ footer .portfolio-link:hover {
 }
 
 .accordion .header-title {
-	width: 90%;
+	width: 100%;
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -414,6 +421,19 @@ footer .portfolio-link:hover {
 	gap: 5px;
 	word-break: break-all;
 }
+
+.accordion .header-actions {
+	padding: 0;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.15s ease;
+}
+
+.accordion .header:hover .header-actions {
+	opacity: 1;
+	pointer-events: auto;
+}
+
 
 .accordion .text {
 	flex-direction: column;
@@ -442,7 +462,7 @@ footer .portfolio-link:hover {
 	flex-direction: row;
 	gap: 10px;
 	justify-content: space-between;
-	padding: 0;
+	padding: 10px;
 	margin: 0;
 	cursor: pointer;
 }
@@ -454,20 +474,22 @@ footer .portfolio-link:hover {
 
 .accordion .child {
 	display: flex;
-	width: 100%;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 	align-items: center;
 	flex-direction: row;
-	padding: 10px;
+	padding: 0;
 	gap: 10px;
 	justify-content: space-between;
 }
 
 .accordion .child .badge {
-  font-size: 11px;
-  padding: 3px 8px;
-  margin: 0;
-  border-radius: 999px;
-  color: white;
+	font-size: 11px;
+	padding: 3px 8px;
+	margin: 0;
+	border-radius: 999px;
+	color: white;
 }
 
 .accordion .actions {
@@ -477,5 +499,13 @@ footer .portfolio-link:hover {
 	justify-content: center;
 	gap: 10px;
 	padding: 0;
-	margin: 10px 0;
+	margin: 0 20px 0 0;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.15s ease;
+}
+
+.accordion .content-item:hover .actions {
+	opacity: 1;
+	pointer-events: auto;
 }

@@ -3,7 +3,6 @@ import { postMessageToExtension } from '@webview/utils/bridge.utils';
 import { hexToRgba } from '@webview/utils/color.utils';
 import { useState, type ReactNode } from 'react';
 
-
 export type DropdownChildren = {
 	id: string;
 	title: string;
@@ -45,51 +44,53 @@ export function Accordion({
 					onClick={() => setIsActive(!isActive)}
 					title={tooltip}>
 					<div className="header-title">
-						<div className="text">
-							{title}
-							<div className="subtitle">{subtitle}</div>
+						<div className="section-title">
+							<div className="text">
+								{title}
+								<div className="subtitle">{subtitle}</div>
+							</div>
 						</div>
-						{actions}
+						{actions && <div className="header-actions">{actions}</div>}
 					</div>
 				</div>
 				<div className="content">
-					{children.map((val, index) => {
-            console.log('AAAAAAAA', val.group?.firstUppercase);
-
-            return (
-              <div
-                id={val.id}
-                key={val.id}
-                className="content-item"
-                tabIndex={0}
-                role="button"
-                title={tooltipChildren?.(index)}
-                onClick={() => onClickChildren
-                  ? onClickChildren(val)
-                  : postMessageToExtension(val.id)}>
-                <div className="child">
-                  <span>{val.title}</span>
-                  {val.group && (
-                    <span
-                      className="badge"
-                      style={val.badgeColor
-                        ? {
-                          backgroundColor: hexToRgba(val.badgeColor, 0.1),
-                          borderColor: val.badgeColor,
-                          border: '1px solid',
-                          color: val.badgeColor,
-                        }
-                        : {}}>
-                      {val.group.firstUppercase}
-                    </span>
-                  )}
-                </div>
-                {actionsChildren && (
-                  <div className="actions">{actionsChildren(val)}</div>
-                )}
-              </div>
-            );
-          })}
+					{children.map((val, index) => (
+						<div
+							id={val.id}
+							key={val.id}
+							className="content-item"
+							tabIndex={0}
+							role="button"
+							title={tooltipChildren?.(index)}
+							onClick={() =>
+								onClickChildren
+									? onClickChildren(val)
+									: postMessageToExtension(val.id)
+							}>
+							<div className="child">
+								<span>{val.title}</span>
+								{val.group && (
+									<span
+										className="badge"
+										style={
+											val.badgeColor
+												? {
+														backgroundColor: hexToRgba(val.badgeColor, 0.1),
+														borderColor: val.badgeColor,
+														border: '1px solid',
+														color: val.badgeColor,
+													}
+												: {}
+										}>
+										{val.group.firstUppercase}
+									</span>
+								)}
+							</div>
+							{actionsChildren && (
+								<div className="actions">{actionsChildren(val)}</div>
+							)}
+						</div>
+					))}
 				</div>
 			</div>
 		</div>
