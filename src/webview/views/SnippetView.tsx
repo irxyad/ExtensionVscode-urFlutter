@@ -1,16 +1,16 @@
 import { SnippetAction } from '@features/snippets/snippet.constants';
-import { DeleteorRenameSnippetProp, StorageSnippetInterface } from '@features/snippets/types/snippet.types';
+import {
+  DeleteorRenameSnippetProp,
+  StorageSnippetInterface,
+} from '@features/snippets/types/snippet.types';
 import { postMessageToExtension } from '@webview/utils/bridge.utils';
 import { useEffect, useState } from 'react';
 import { Accordion } from '../components/Accordion';
-import {
-    ActionBridgeWebview,
-    ReturnBridgeWebview,
-} from '../webview.constants';
+import { ActionBridgeWebview, ReturnBridgeWebview } from '../webview.constants';
 
 function SnippetView() {
 	const [listSnippets, setListSnippets] = useState<StorageSnippetInterface[]>(
-		[]
+		[],
 	);
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -55,8 +55,7 @@ function SnippetView() {
 
 	return (
 		<div className="snippet-view">
-			<p className="label-main-menu">Your Snippets:</p>
-			<p>The panel title is based on the snippet's project name.</p>
+      <p>Snippets are grouped by their workspace/project.</p>
 
 			{isLoading ? (
 				<p>Loading snippets...</p>
@@ -64,37 +63,37 @@ function SnippetView() {
 				<p>Empty Snippets</p>
 			) : (
 				<div className="accordion-snippets">
-					{listSnippets.map((snippet) => {
-						const accordionItems = snippet.dataSnippet.map((snip) => ({
-							id: snip.snippetName,
-							title: snip.snippetName,
+					{listSnippets.map((storage) => {
+						const accordionItems = storage.snippets.map((snip) => ({
+							id: snip.name,
+							title: snip.name,
 						}));
 
 						return (
 							<Accordion
-								key={snippet.storageName}
-								id={snippet.storageName}
-								title={snippet.storageName}
+								key={storage.name}
+								id={storage.name}
+								title={storage.name}
 								children={accordionItems}
 								onClickChildren={(val) => {
 									postMessageToExtension(ActionBridgeWebview.EditSnippet, {
 										extra: {
-											snippetName: val.id,
-											storage: snippet,
+											snippetName: val.title,
+											storage: storage,
 										},
 									});
 								}}
-								tooltip={`From Workspace: ${snippet.metadata.uri_workspace}`}
+								tooltip={`From Workspace: ${storage.metadata.uri_workspace}`}
 								tooltipChildren={(index) =>
-									`Type ${snippet.dataSnippet[index].body.prefix} to get snippet`
+									`Type ${storage.snippets[index].prefix} to get snippet`
 								}
 								actions={[
 									<button
-										key={`delete-group-${snippet.storageName}`}
-										id={snippet.storageName}
+										key={`delete-group-${storage.name}`}
+										id={storage.name}
 										className="btn-delete-group-snippet"
 										data-action={SnippetAction.DeleteGroupSnippet}
-										onClick={() => deleteGroupSnippets(snippet.storageName)}
+										onClick={() => deleteGroupSnippets(storage.name)}
 										title="Delete this group and all snippets">
 										&times;
 									</button>,
@@ -109,7 +108,7 @@ function SnippetView() {
 											e.stopPropagation();
 
 											deleteSnippets({
-												groupSnippet: snippet.storageName,
+												groupSnippet: storage.name,
 												keySnippet: val.id,
 											});
 										}}
@@ -124,12 +123,15 @@ function SnippetView() {
 										onClick={(e) => {
 											e.stopPropagation();
 
-											postMessageToExtension(ActionBridgeWebview.RenameSnippet, {
-												extra: {
-													snippetName: val.id,
-													storage: snippet,
+											postMessageToExtension(
+												ActionBridgeWebview.RenameSnippet,
+												{
+													extra: {
+														snippetName: val.id,
+														storage: storage,
+													},
 												},
-											});
+											);
 										}}
 										title="Rename this snippet">
 										&#128393;

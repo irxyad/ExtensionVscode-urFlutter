@@ -1,4 +1,5 @@
-import { logger } from '@common/utils/logger.utils';
+import { AppError } from '@common/error/app.error';
+import ProjectUtils from '@common/utils/project.utils';
 import ValidationUtils from '@common/utils/validation.utils';
 import {
   MetadataStorageSnippet,
@@ -12,11 +13,17 @@ import * as zlib from 'zlib';
 import { appContext } from '../../common/app-context';
 import { AppConstant } from '../../common/constants/common.constants';
 import { ReturnBridgeWebview } from '../../webview/webview.constants';
-import { SnippetConstant } from './snippet.constants';
+import { SnippetAction, SnippetConstant } from './snippet.constants';
 
-async function getSnippetUriByFileName(
-	filename: string,
-): Promise<vscode.Uri | null> {
+async function getFilenameStorages(): Promise<string[]> {
+	const dir = await appContext.storage.readDir();
+
+	return dir
+		.filter(([file]) => file.endsWith(SnippetConstant.SuffixGroupSnippet))
+		.map(([filename]) => filename);
+}
+
+async function getUriByFilename(filename: string): Promise<vscode.Uri | null> {
 	const dir = await appContext.storage.readDir();
 	const storageUri = appContext.storage.uri;
 
@@ -29,98 +36,128 @@ async function getSnippetUriByFileName(
 	return null;
 }
 
-function parseStorageSnippet(
-	parsed: Record<string, unknown>,
-): StorageSnippetInterface {
-	const metadata: MetadataStorageSnippet = {
-		from_workspace: parsed.from_workspace as string,
-		uri_workspace: parsed.uri_workspace as string,
-	};
-
-	const dataSnippets = Object.entries(parsed).filter(
-		([, value]) =>
-			typeof value === 'object' && value !== null && !Array.isArray(value),
+async function getUriByWorkspace(
+	workspaceName: string,
+): Promise<vscode.Uri | null> {
+	return getUriByFilename(
+		`${workspaceName}-${SnippetConstant.SuffixGroupSnippet}`,
 	);
+}
+
+async function readJsonFile(
+	filename: string,
+): Promise<Record<string, unknown> | null> {
+	return appContext.storage.readFile<Record<string, unknown>>(filename);
+}
+
+function parseToStorageSnippet(
+	parsed: Record<string, unknown>,
+): StorageSnippetInterface | null {
+	const metadata = parsed.metadata as MetadataStorageSnippet | undefined;
+	const snippets = parsed.snippets as SnippetInterface[] | undefined;
+
+	if (!metadata || !snippets) {
+		return null;
+	}
 
 	return {
 		metadata,
-		storageName: metadata.from_workspace,
-		dataSnippet: dataSnippets.map(([snippetName, body]) => ({
-			snippetName,
-			body: body as SnippetInterface,
-		})),
+		name: ProjectUtils.formatToTitle(metadata.from_workspace ?? 'Unknown'),
+		snippets,
 	};
 }
 
-async function readSnippetFile(
-	uri: vscode.Uri,
-): Promise<Record<string, unknown> | null> {
-	try {
-		const data = await appContext.storage.readFile<Record<string, unknown>>(
-			uri.path.split('/').pop()!,
-		);
-		return data;
-	} catch (error) {
-		logger.error('Error reading snippet file:', error);
-		return null;
-	}
-}
-
-async function readAllSnippets(): Promise<StorageSnippetInterface[]> {
-	const uris = await getAllGlobalStorageSnippetsUri();
+async function readStorages(): Promise<StorageSnippetInterface[]> {
+	const storageFiles = await getFilenameStorages();
 	const results: StorageSnippetInterface[] = [];
 
-	for (const uri of uris) {
-		const parsed = await readSnippetFile(uri);
-		if (parsed) {
-			results.push(parseStorageSnippet(parsed));
+	for (const storageFile of storageFiles) {
+		const parsed = await readJsonFile(storageFile);
+		if (!parsed) {
+			continue;
+		}
+
+		const storage = parseToStorageSnippet(parsed);
+		if (storage) {
+			results.push(storage);
 		}
 	}
 
 	return results;
 }
 
-async function getAllGlobalStorageSnippetsUri(): Promise<vscode.Uri[]> {
-	const dir = await appContext.storage.readDir();
-	const storageUri = appContext.storage.uri;
+async function readStorage(
+	uri: vscode.Uri,
+): Promise<StorageSnippetInterface | null> {
+	const workspaceName = vscode.workspace.getWorkspaceFolder(uri)?.name;
 
-	return dir
-		.filter(([file]) => file.endsWith(SnippetConstant.SuffixGroupSnippet))
-		.map(([file]) => vscode.Uri.joinPath(storageUri, file));
+	if (!workspaceName) {
+		throw new AppError("Can't detect name workspace");
+	}
+
+	const storageFiles = await getFilenameStorages();
+
+	for (const storageFile of storageFiles) {
+		const storageName = storageFile.split('-')[0];
+		if (storageName !== workspaceName) {
+			continue;
+		}
+
+		const parsed = await readJsonFile(storageFile);
+		if (!parsed) {
+			continue;
+		}
+
+		const result = parseToStorageSnippet(parsed);
+		if (result) {
+			return result;
+		}
+	}
+
+	return null;
 }
 
-async function getUriSnippetBasedWorkspace(
-	name: string,
-): Promise<vscode.Uri | null> {
-	return getSnippetUriByFileName(
-		`${name}-${SnippetConstant.SuffixGroupSnippet}`,
-	);
-}
+async function updateStorage(
+	workspaceName: string,
+	snippetName: string,
+	body: SnippetInterface,
+): Promise<void> {
+	const uri = await getUriByWorkspace(workspaceName);
 
-async function getUriSnippetBasedName(
-	name: string,
-): Promise<vscode.Uri | null> {
-	return getUriSnippetBasedWorkspace(name);
-}
+	if (!uri) {
+		throw new AppError(`Can't find workspace`);
+	}
 
-async function reloadSnippets(webview: WebviewView): Promise<void> {
-	const snippets = await readAllSnippets();
+	const storage = await readStorage(uri);
 
-	webview.webview.postMessage({
-		action: 'reloadSnippets',
-		snippets,
+	if (!storage) {
+		throw new AppError("Can't find storage snippet");
+	}
+
+	const index = storage.snippets.findIndex((val) => val.name === snippetName);
+
+	if (index === -1) {
+		throw new AppError(`Snippet "${snippetName}" not found`);
+	}
+
+	storage.snippets[index] = body;
+
+	await appContext.storage.writeFile({
+		filename: uri.path.split('/').pop() as string,
+		content: storage,
 	});
 }
 
-async function saveCompressedSnippets(data: object): Promise<void> {
+async function save(data: object): Promise<void> {
 	const compressed = zlib.gzipSync(JSON.stringify(data)).toString('base64');
 	await appContext.state.update(SnippetConstant.KeySyncSnippet, compressed);
 }
 
-async function loadCompressedSnippets(): Promise<object | null> {
+async function load(): Promise<object | null> {
 	const compressed = appContext.state.get<string>(
 		SnippetConstant.KeySyncSnippet,
 	);
+
 	if (!compressed) {
 		return null;
 	}
@@ -128,33 +165,58 @@ async function loadCompressedSnippets(): Promise<object | null> {
 	const decompressed = zlib
 		.gunzipSync(Buffer.from(compressed, 'base64'))
 		.toString();
+
 	return JSON.parse(decompressed);
 }
 
-async function convertRawToStorageSnippet(
-	uri: vscode.Uri,
-): Promise<StorageSnippetInterface | null> {
-	const parsed = await readSnippetFile(uri);
-	if (!parsed) {
-		return null;
-	}
-	return parseStorageSnippet(parsed);
+async function loadStorages(webview: WebviewView): Promise<void> {
+	const storages = await readStorages();
+
+	webview.webview.postMessage({
+		action: SnippetAction.LoadStorageSnippets,
+		storages,
+	});
 }
 
-async function editSnippet({
+async function checkPrefixOrName(
+	key: string,
+	checkFor: 'both' | 'prefix' | 'snippetName' = 'both',
+): Promise<SnippetInterface | undefined> {
+	const ws = appContext.workspace.getWorkspaceFolder();
+
+	if (!ws) {
+		throw new AppError("Can't detect name workspace");
+	}
+
+	const storage = await readStorage(ws.workspaceUri);
+
+	if (!storage) {
+		return undefined;
+	}
+
+	if (checkFor === 'snippetName') {
+		return storage.snippets.find((val) => val.name === key);
+	}
+
+	if (checkFor === 'prefix') {
+		return storage.snippets.find((val) => val.prefix === key);
+	}
+
+	// both
+	return storage.snippets.find((val) => val.name === key || val.prefix === key);
+}
+
+async function edit({
 	storage,
 	snippetName,
 }: {
 	storage: StorageSnippetInterface;
 	snippetName: string;
 }): Promise<void> {
-	const snippet = storage.dataSnippet.find(
-		(val) => val.snippetName === snippetName,
-	);
+	const snippet = storage.snippets.find((val) => val.name === snippetName);
 
 	if (!snippet) {
-		vscode.window.showInformationMessage("Can't open, snippet not found");
-		return;
+		throw new AppError("Can't open, snippet not found");
 	}
 
 	const fileName = [
@@ -165,7 +227,7 @@ async function editSnippet({
 	].join('-');
 
 	const txt =
-		`${SnippetConstant.TitlePrefix}${snippet.body.prefix}\n\n\t${snippet.body.body}`.replaceAll(
+		`${SnippetConstant.TitlePrefix}${snippet.prefix}\n\n\t${snippet.body}`.replaceAll(
 			',',
 			'',
 		);
@@ -180,11 +242,11 @@ async function editSnippet({
 			event.document.uri.toString() === doc.uri.toString()
 		) {
 			event.waitUntil(
-				saveEditedSnippet({
+				saveEditing({
 					newSnippet: event.document.getText(),
 					snippetName,
 					storage,
-					body: snippet.body,
+					body: snippet,
 				}),
 			);
 		}
@@ -197,7 +259,7 @@ async function editSnippet({
 	});
 }
 
-async function saveEditedSnippet({
+async function saveEditing({
 	newSnippet,
 	snippetName,
 	storage,
@@ -208,201 +270,105 @@ async function saveEditedSnippet({
 	storage: StorageSnippetInterface;
 	body: SnippetInterface;
 }): Promise<void> {
-	const uriSnippet = await getUriSnippetBasedWorkspace(
-		storage.metadata.from_workspace,
+	const lines = newSnippet.split('\n');
+	const prefixLine = lines.find((val) =>
+		val.includes(SnippetConstant.TitlePrefix),
 	);
 
-	if (!uriSnippet) {
-		vscode.window.showErrorMessage("Can't find snippet file");
-		return;
-	}
-
-	const lines = newSnippet.split('\n');
-	const prefixLine = lines.find((val) => val.includes('@prefix'));
-
 	if (!prefixLine) {
-		vscode.window.showErrorMessage('Prefix is required');
-		return;
+		throw new AppError(
+			`Prefix is required. Add this into new line first: ${SnippetConstant.TitlePrefix} <your_prefix>`,
+		);
 	}
 
 	const prefix = prefixLine.split(' ')[2].replaceAll('\r', '');
 
-	const isValid = ValidationUtils.snippetName(prefix);
-	if (!isValid) {
-		vscode.window.showErrorMessage('Invalid prefix');
-		return;
+	if (!ValidationUtils.snippetName(prefix)) {
+		throw new AppError(`Invalid prefix`);
 	}
 
-	const isDuplicate = await isExistPrefixOrSnippetName(
-		prefix,
-		storage,
-		'prefix',
-	);
-	if (isDuplicate) {
-		return;
+	const existing = await checkPrefixOrName(prefix, 'prefix');
+
+	if (existing) {
+		throw new AppError(
+			`Oops! "${prefix}" is already used as a prefix for "${existing.name}". Please choose another`,
+		);
 	}
 
-	const parsed = await readSnippetFile(uriSnippet);
-	if (!parsed) {
-		return;
-	}
-
-	parsed[snippetName] = {
+	await updateStorage(storage.metadata.from_workspace ?? '', snippetName, {
+		...body,
 		prefix,
 		body: lines.filter((val) => !val.includes('@prefix')),
-		description: body.description,
-	} satisfies SnippetInterface;
-
-	await appContext.storage.writeFile({
-		filename: uriSnippet.path.split('/').pop()!,
-		content: parsed,
 	});
 
-	vscode.window.showInformationMessage(`Snippet ${prefix} updated!`);
-
-	const listSnippets = await readAllSnippets();
+	const listSnippets = await readStorages();
 	appContext.webview.postMessage(
 		ReturnBridgeWebview.SnippetsData,
 		listSnippets,
 	);
 }
 
-async function renameSnippetName({
+async function rename({
 	storage,
 	snippetName,
+	rename,
 }: {
 	storage: StorageSnippetInterface;
 	snippetName: string;
-}): Promise<boolean> {
-	const rename = await vscode.window.showInputBox({
-		title: 'Rename Snippet',
-		prompt: 'Type here to rename it',
-		validateInput: (value) => {
-			if (!value) {
-				return 'Snippet name cannot be empty.';
-			}
-
-			const isValid = ValidationUtils.snippetName(value);
-			if (!isValid) {
-				return 'Invalid snippet name.';
-			}
-			return null;
-		},
-	});
-
+	rename: string;
+}): Promise<void> {
 	if (!rename) {
-		vscode.window.showInformationMessage('Canceled');
-		return false;
+		throw new AppError('Snippet name cannot be empty');
 	}
 
-	const isDuplicate = await isExistPrefixOrSnippetName(
-		rename,
-		storage,
-		'snippetName',
-	);
+	if (!ValidationUtils.snippetName(rename)) {
+		throw new AppError('Invalid snippet name');
+	}
+
+	const isDuplicate = await checkPrefixOrName(rename, 'snippetName');
+
 	if (isDuplicate) {
-		return false;
+		throw new AppError(
+			`Oops! "${rename}" is already used as a snippet name. Please choose another`,
+		);
 	}
 
-	const uriSnippet = await getUriSnippetBasedWorkspace(
-		storage.metadata.from_workspace,
-	);
+	const uri = await getUriByWorkspace(storage.metadata.from_workspace ?? '');
 
-	if (!uriSnippet) {
-		vscode.window.showErrorMessage("Can't find snippet file");
-		return false;
+	if (!uri) {
+		throw new AppError("Can't find snippet file");
 	}
 
-	const parsed = await readSnippetFile(uriSnippet);
-	if (!parsed) {
-		return false;
+	const index = storage.snippets.findIndex((val) => val.name === snippetName);
+
+	if (index === -1) {
+		throw new AppError("Can't find snippet to rename");
 	}
 
-	const renamed = Object.fromEntries(
-		Object.entries(parsed).map(([key, value]) =>
-			key === snippetName ? [rename, value] : [key, value],
-		),
-	);
+	storage.snippets[index] = { ...storage.snippets[index], name: rename };
 
 	await appContext.storage.writeFile({
-		filename: uriSnippet.path.split('/').pop()!,
-		content: renamed,
+		filename: uri.path.split('/').pop()!,
+		content: storage,
 	});
 
-	vscode.window.showInformationMessage(`Rename ${rename} successful!`);
-
-	const listSnippets = await readAllSnippets();
+	const listSnippets = await readStorages();
 	appContext.webview.postMessage(
 		ReturnBridgeWebview.SnippetsData,
 		listSnippets,
 	);
-
-	return true;
-}
-
-async function isExistPrefixOrSnippetName(
-	key: string,
-	storage?: StorageSnippetInterface,
-	checkFor: 'both' | 'prefix' | 'snippetName' = 'both',
-): Promise<boolean> {
-	let snippets = storage?.dataSnippet;
-
-	if (!snippets) {
-		const workspace = appContext.workspace.getWorkspaceFolder();
-		if (!workspace) {
-			vscode.window.showErrorMessage("Can't detect name workspace");
-			return true;
-		}
-
-		const uri = await getUriSnippetBasedWorkspace(workspace.workspaceName);
-		if (!uri) {
-			return false;
-		}
-
-		const converted = await convertRawToStorageSnippet(uri);
-		if (!converted) {
-			return false;
-		}
-
-		snippets = converted.dataSnippet;
-		storage = converted;
-	}
-
-	if (checkFor === 'snippetName' || checkFor === 'both') {
-		const duplicate = snippets.find((val) => val.snippetName === key);
-		if (duplicate) {
-			vscode.window.showErrorMessage(
-				`Oops! "${key}" is already used as a snippet name from "${storage!.metadata.from_workspace}". Please choose another`,
-			);
-			return true;
-		}
-	}
-
-	if (checkFor === 'prefix' || checkFor === 'both') {
-		const duplicate = snippets.find((val) => val.body.prefix === key);
-		if (duplicate) {
-			vscode.window.showErrorMessage(
-				`Oops! "${key}" is already used as a prefix for "${duplicate.snippetName}". Please choose another`,
-			);
-			return true;
-		}
-	}
-
-	return false;
 }
 
 const SnippetUtils = {
-	readAllSnippets,
-	getAllGlobalStorageSnippetsUri,
-	getUriSnippetBasedWorkspace,
-	getUriSnippetBasedName,
-	reloadSnippets,
-	saveCompressedSnippets,
-	loadCompressedSnippets,
-	editSnippet,
-	renameSnippetName,
-	convertRawToStorageSnippet,
-	isExistPrefixOrSnippetName,
+	edit,
+	save,
+	load,
+	readStorage,
+	readStorages,
+	loadStorages,
+	updateStorage,
+	checkPrefixOrName,
+	rename,
 };
 
 export default SnippetUtils;

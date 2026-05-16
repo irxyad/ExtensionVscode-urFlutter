@@ -1,13 +1,17 @@
-export type StorageSnippetInterface = {
+/**
+ * Snippet yang dibuat berdasarkan workspace/project nya
+ */
+export interface StorageSnippetInterface {
 	metadata: MetadataStorageSnippet;
-	storageName: string;
-	dataSnippet: { snippetName: string; body: SnippetInterface }[];
-};
+	name: string; // Nama yang diambil dari workspace/project yang telah diformat
+	snippets: SnippetInterface[];
+}
 
 export type SnippetInterface = {
-	prefix: string;
-	description: string;
-	body: string[];
+	name: string; // Nama snippet yang akan muncul di UI
+	prefix: string; // Prefix/keyword yang jika di ketik akan muncul sebagai snippet
+	description: string; // Tentang snippet ini
+	body: string[]; // Isi snippet
 };
 
 export type ActionSnippet = {
@@ -20,7 +24,10 @@ export type DeleteorRenameSnippetProp = {
 	groupSnippet: string;
 };
 
+/**
+ * Isinya dari workspace/project mana dan uri nya
+ */
 export type MetadataStorageSnippet = {
-	from_workspace: string;
-	uri_workspace: string;
+	from_workspace: string | undefined;
+	uri_workspace: string | undefined;
 };

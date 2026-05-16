@@ -373,7 +373,11 @@ footer .portfolio-link:hover {
 	background-color: #f0f0f027;
 }
 
-
+.accordion-snippets {
+	display: flex;
+  flex-direction: column;
+	gap: 15px;
+}
 
 .accordion .item.active .content {
 	display: block;
@@ -389,10 +393,10 @@ footer .portfolio-link:hover {
 	align-items: start;
 }
 
-.accordion .section-title{
-  display: flex;
-  gap: 1px;
-  flex: 1;
+.accordion .section-title {
+	display: flex;
+	gap: 1px;
+	flex: 1;
 	align-items: center;
 }
 
@@ -433,7 +437,6 @@ footer .portfolio-link:hover {
 	opacity: 1;
 	pointer-events: auto;
 }
-
 
 .accordion .text {
 	flex-direction: column;

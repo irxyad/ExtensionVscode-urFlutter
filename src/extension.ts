@@ -4,6 +4,7 @@ import StorageKey from '@common/constants/storage-key.constants';
 import '@common/extensions/primitive.ext';
 import { logger } from '@common/utils/logger.utils';
 import { generateFromToEntity } from '@features/generate/commands/entity.command';
+import { revealWorkspace } from '@features/platform/commands/reveal-workspace.command';
 import { initFolder } from '@features/project/commands/init-folder.command';
 import { autoLoadSnippets } from '@features/snippets/commands/auto-load.command';
 import { createSnippet } from '@features/snippets/commands/create.command';
@@ -16,6 +17,10 @@ async function registerAll(context: vscode.ExtensionContext) {
 
 	// Register create snippet command
 	createSnippet(context);
+
+  // Register reveal workspace
+  // Digunakan di hover snippet agar bisa diklik ke workspace
+  revealWorkspace(context);
 
   // Belum diperbaiki template nya jadi kita skip dulu handleAutoInitFolder
 

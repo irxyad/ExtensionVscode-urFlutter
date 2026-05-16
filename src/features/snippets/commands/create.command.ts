@@ -1,9 +1,10 @@
 import { appContext } from '@common/app-context';
+import { AppError } from '@common/error/app.error';
 import { WorkspaceInterface } from '@common/types/workspace.types';
 import ValidationUtils from '@common/utils/validation.utils';
 import SnippetUtils from '@features/snippets/snippet.utils';
 import {
-  MetadataStorageSnippet,
+  SnippetInterface,
   StorageSnippetInterface,
 } from '@features/snippets/types/snippet.types';
 import { ReturnBridgeWebview } from '@webview/webview.constants';
@@ -14,152 +15,141 @@ export function createSnippet(context: vscode.ExtensionContext) {
 	const command = vscode.commands.registerCommand(
 		'extension.createSnippet',
 		async (_) => {
-			const wsp = appContext.workspace.getWorkspaceFolder();
-			if (!wsp) {
-				vscode.window.showErrorMessage(
-					"Can't create, no workspace folder found.",
+			try {
+				const wsp = appContext.workspace.getWorkspaceFolder();
+				if (!wsp) {
+					vscode.window.showErrorMessage(
+						"Can't create, no workspace folder found.",
+					);
+					return;
+				}
+
+				const editor = vscode.window.activeTextEditor;
+				if (!editor) {
+					return;
+				}
+
+				const selectedText = editor.document.getText(editor.selection);
+				if (!selectedText.trim()) {
+					vscode.window.showErrorMessage('Please select some text!');
+					return;
+				}
+
+				const snippetName = await vscode.window.showInputBox({
+					title: 'Enter Snippet Name',
+					prompt:
+						'Snippet name must contain only lowercase letters and no spaces.',
+					ignoreFocusOut: true,
+					validateInput: (value) => {
+						if (!value) {
+							return 'Snippet name cannot be empty.';
+						}
+						if (!ValidationUtils.snippetName(value)) {
+							return 'Invalid snippet name.';
+						}
+						return null;
+					},
+				});
+
+				if (!snippetName) {
+					vscode.window.showWarningMessage('Snippet creation canceled.');
+					return;
+				}
+
+				const alreadyExists = await SnippetUtils.checkPrefixOrName(snippetName);
+				if (alreadyExists) {
+					vscode.window.showWarningMessage(
+						`Snippet "${snippetName}" already exists.`,
+					);
+					return;
+				}
+
+				await saveNewSnippet({ wsp, snippetName, selectedText });
+
+				vscode.window.showInformationMessage(
+					`Snippet "${snippetName}" created!`,
 				);
-				return;
+			} catch (e) {
+				const message =
+					e instanceof AppError ? e.message : 'Something went wrong.';
+				vscode.window.showErrorMessage(message);
 			}
-
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				return;
-			}
-
-			const selectedText = editor.document.getText(editor.selection);
-			if (!selectedText.trim()) {
-				vscode.window.showErrorMessage('Please select some text!');
-				return;
-			}
-
-			const snippetName = await vscode.window.showInputBox({
-				title: 'Enter Snippet Name',
-				prompt:
-					'Snippet name must contain only lowercase letters and no spaces.',
-				ignoreFocusOut: true,
-				validateInput: (value) => {
-					if (!value) {
-						return 'Snippet name cannot be empty.';
-					}
-
-					const isValid = ValidationUtils.snippetName(value);
-
-					if (!isValid) {
-						return 'Invalid snippet name.';
-					}
-					return null;
-				},
-			});
-
-			if (!snippetName) {
-				vscode.window.showWarningMessage('Snippet creation canceled.');
-				return;
-			}
-
-			const alreadyExists =
-				await SnippetUtils.isExistPrefixOrSnippetName(snippetName);
-			if (alreadyExists) {
-				vscode.window.showWarningMessage(
-					`Snippet "${snippetName}" already exists.`,
-				);
-				return;
-			}
-
-			await saveNewSnippet(context, { wsp, snippetName, selectedText });
 		},
 	);
 
 	context.subscriptions.push(command);
 }
 
-async function saveNewSnippet(
-	context: vscode.ExtensionContext,
-	opts: { wsp: WorkspaceInterface; snippetName: string; selectedText: string },
-): Promise<void> {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function saveNewSnippet(opts: {
+	wsp: WorkspaceInterface;
+	snippetName: string;
+	selectedText: string;
+}): Promise<void> {
 	const { wsp, snippetName, selectedText } = opts;
 
-	const storage = await createGroupSnippet(context, { wsp });
+	await ensureGroupSnippetExists(wsp);
 
-	const newEntry = {
-		[snippetName]: {
-			prefix: snippetName,
-			body: selectedText.split('\n'),
-			description: `Your snippet generated from workspace [${wsp.workspaceName}]`,
-		},
+	const filename = `${wsp.workspaceName}-${SnippetConstant.SuffixGroupSnippet}`;
+	const existing =
+		await appContext.storage.readFile<StorageSnippetInterface>(filename);
+
+	const newSnippet: SnippetInterface = {
+		name: snippetName,
+		prefix: snippetName,
+		body: selectedText.split('\n'),
+    description: `Snippet from workspace **${wsp.workspaceName}**`,
 	};
 
-	const existingSnippets = await readExistingSnippets(storage);
+	const updated: StorageSnippetInterface = {
+		metadata: existing?.metadata ?? {
+			from_workspace: wsp.workspaceName,
+			uri_workspace: wsp.workspaceUri.path,
+		},
+		name: existing?.name ?? wsp.workspaceName,
+		snippets: [...(existing?.snippets ?? []), newSnippet],
+	};
 
-	const merged = { ...existingSnippets, ...newEntry };
-	const encoded = Buffer.from(JSON.stringify(merged, null, 2));
-
-	await vscode.workspace.fs.writeFile(storage, encoded);
-
-	const keyStorage = `${snippetName}-${SnippetConstant.SuffixGroupSnippet}`;
-	context.globalState.update(keyStorage, merged);
-
+	await appContext.storage.writeFile({ filename, content: updated });
 	await saveSyncSnippet();
 
-	vscode.window.showInformationMessage(`Snippet "${snippetName}" created!`);
-
-	const listSnippets = await SnippetUtils.readAllSnippets();
+	const listSnippets = await SnippetUtils.readStorages();
 	appContext.webview.postMessage(
 		ReturnBridgeWebview.SnippetsData,
 		listSnippets,
 	);
 }
 
-async function readExistingSnippets(
-	uri: vscode.Uri,
-): Promise<Record<string, unknown>> {
-	try {
-		const data = await vscode.workspace.fs.readFile(uri);
-		if (data.length === 0) {
-			return {};
-		}
-		return JSON.parse(new TextDecoder().decode(data));
-	} catch {
-		return {};
-	}
-}
+async function ensureGroupSnippetExists(
+	wsp: WorkspaceInterface,
+): Promise<void> {
+	const filename = `${wsp.workspaceName}-${SnippetConstant.SuffixGroupSnippet}`;
+	const existing =
+		await appContext.storage.readFile<StorageSnippetInterface>(filename);
 
-async function createGroupSnippet(
-	context: vscode.ExtensionContext,
-	{ wsp }: { wsp: WorkspaceInterface },
-): Promise<vscode.Uri> {
-	const groupSnippetName = `${wsp.workspaceName}-${SnippetConstant.SuffixGroupSnippet}`;
-	const groupSnippetUri = vscode.Uri.joinPath(
-		context.globalStorageUri,
-		groupSnippetName,
-	);
-
-	try {
-		await vscode.workspace.fs.stat(groupSnippetUri);
-		return groupSnippetUri;
-	} catch {
-		// Kalau belum ada, lanjut buat
+	if (existing) {
+		return;
 	}
 
-	const metadata: MetadataStorageSnippet = {
-		from_workspace: wsp.workspaceName,
-		uri_workspace: wsp.workspaceUri.path,
+	const initial: StorageSnippetInterface = {
+		metadata: {
+			from_workspace: wsp.workspaceName,
+			uri_workspace: wsp.workspaceUri.path,
+		},
+		name: wsp.workspaceName,
+		snippets: [],
 	};
 
-	await vscode.workspace.fs.writeFile(
-		groupSnippetUri,
-		Buffer.from(JSON.stringify(metadata, null, 2)),
-	);
-
-	return groupSnippetUri;
+	await appContext.storage.writeFile({ filename, content: initial });
 }
 
 async function saveSyncSnippet(): Promise<void> {
-	const listSnippets = await SnippetUtils.readAllSnippets();
+	const listSnippets = await SnippetUtils.readStorages();
 
 	const dataCompressed = Object.fromEntries(
-		listSnippets.map((val) => [val.storageName, val]),
+		listSnippets.map((val) => [val.name, val]),
 	) satisfies Record<string, StorageSnippetInterface>;
 
-	await SnippetUtils.saveCompressedSnippets(dataCompressed);
+	await SnippetUtils.save(dataCompressed);
 }

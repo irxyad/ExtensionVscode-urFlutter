@@ -9,6 +9,7 @@ export const ActionBridgeWebview = {
   IsRenamedSnippet: 'isRenamedSnippet',
   EditGroupSnippet: 'editGroupSnippet',
   Log: 'log',
+  LoadStorageSnippets:'loadStorageSnippets',
 };
 
 // constant yang kita dapat dari extension ke webview

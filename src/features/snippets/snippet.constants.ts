@@ -11,4 +11,5 @@ export const SnippetAction = {
 	DeleteSnippet: ActionBridgeWebview.DeleteSnippet,
 	RenameSnippet: ActionBridgeWebview.RenameSnippet,
 	RenameGroupSnippet: ActionBridgeWebview.EditGroupSnippet,
+  LoadStorageSnippets:ActionBridgeWebview.LoadStorageSnippets,
 };

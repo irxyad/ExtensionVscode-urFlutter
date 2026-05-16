@@ -28,7 +28,7 @@ import {
 } from '@webview/webview.constants';
 import * as vscode from 'vscode';
 
-type MessageHandler = (message: any, webview: vscode.Webview) => Promise<void>;
+type MessageHandler = (extra: any, webview: vscode.Webview) => Promise<void>;
 
 const messageHandlers: Partial<Record<string, MessageHandler>> = {
 	// Flutter
@@ -91,38 +91,38 @@ const messageHandlers: Partial<Record<string, MessageHandler>> = {
 
 	// Snippet handlers
 	[ActionBridgeWebview.GetSnippets]: async (_, webview) => {
-		const listSnippets = await SnippetUtils.readAllSnippets();
+		const listSnippets = await SnippetUtils.readStorages();
+
 		webview.postMessage({
 			action: ReturnBridgeWebview.SnippetsData,
 			data: listSnippets,
 		});
 	},
-	[ActionBridgeWebview.DeleteGroupSnippet]: async (message, webview) => {
-		const isDeleted = await deleteGroupSnippet(message.storageName);
+	[ActionBridgeWebview.DeleteGroupSnippet]: async (extra, webview) => {
+		const isDeleted = await deleteGroupSnippet(extra.storageName);
 		if (isDeleted) {
 			webview.postMessage({ action: ActionBridgeWebview.IsDeletedSnippet });
 		}
 	},
-	[ActionBridgeWebview.DeleteSnippet]: async (message, webview) => {
-		const isDeleted = await deleteSnippet(message.props);
+	[ActionBridgeWebview.DeleteSnippet]: async (extra, webview) => {
+		const isDeleted = await deleteSnippet(extra.props);
 		if (isDeleted) {
 			webview.postMessage({ action: ActionBridgeWebview.IsDeletedSnippet });
 		}
 	},
-	[ActionBridgeWebview.EditSnippet]: async (message) => {
-		SnippetUtils.editSnippet({
-			snippetName: message.snippetName,
-			storage: message.storage,
+	[ActionBridgeWebview.EditSnippet]: async (extra) => {
+		SnippetUtils.edit({
+			snippetName: extra.snippetName,
+			storage: extra.storage,
 		});
 	},
-	[ActionBridgeWebview.RenameSnippet]: async (message, webview) => {
-		const isRenamed = await SnippetUtils.renameSnippetName({
-			snippetName: message.snippetName,
-			storage: message.storage,
+	[ActionBridgeWebview.RenameSnippet]: async (extra, webview) => {
+		const isRenamed = await SnippetUtils.rename({
+			snippetName: extra.snippetName,
+			storage: extra.storage,
+      rename: extra.rename,
 		});
-		if (isRenamed) {
-			webview.postMessage({ action: ActionBridgeWebview.IsRenamedSnippet });
-		}
+
 	},
 	[ActionBridgeWebview.Log]: async (message) => {
 		const { level, message: msg, data } = message;
@@ -143,7 +143,7 @@ export async function handleWebviewMessage(
 
 	const handler = messageHandlers[action];
 	if (handler) {
-		await handler(message, webview);
+		await handler(message.extra, webview);
 	} else {
 		logger.error('Unknown action from webview:', action);
 	}
