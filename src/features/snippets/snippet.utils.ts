@@ -8,10 +8,12 @@ import {
 } from '@features/snippets/types/snippet.types';
 import type { WebviewView } from 'vscode';
 import * as vscode from 'vscode';
-import * as zlib from 'zlib';
 import { appContext } from '../../common/app-context';
 import { SnippetAction, SnippetConstant } from './snippet.constants';
 
+/**
+ * @returns seluruh filename storage snippet
+ */
 async function getFilenameStorages(): Promise<string[]> {
 	const dir = await appContext.storage.readDir();
 
@@ -20,6 +22,9 @@ async function getFilenameStorages(): Promise<string[]> {
 		.map(([filename]) => filename);
 }
 
+/**
+ * @returns Uri storage snippet berdasarkan filename storage
+ */
 async function getUriByFilename(filename: string): Promise<vscode.Uri | null> {
 	const dir = await appContext.storage.readDir();
 	const storageUri = appContext.storage.uri;
@@ -42,12 +47,18 @@ async function getUriByWsName(
 	return getUriByFilename(`${workspaceName}${SnippetConstant.SuffixStorage}`);
 }
 
+/**
+ * @returns isi dari file storage
+ */
 async function readJsonFile(
 	filename: string,
 ): Promise<Record<string, unknown> | null> {
 	return appContext.storage.readFile<Record<string, unknown>>(filename);
 }
 
+/**
+ * @returns [StorageSnippetInterface] dari raw file
+ */
 function parseToStorageSnippet(
 	parsed: Record<string, unknown>,
 ): StorageSnippetInterface | null {
@@ -65,6 +76,9 @@ function parseToStorageSnippet(
 	};
 }
 
+/**
+ * @returns Daftar storage
+ */
 async function readStorages(): Promise<StorageSnippetInterface[]> {
 	const storageFiles = await getFilenameStorages();
 	const results: StorageSnippetInterface[] = [];
@@ -84,6 +98,9 @@ async function readStorages(): Promise<StorageSnippetInterface[]> {
 	return results;
 }
 
+/**
+ * @returns storage tertentu berdsarkan nama storage nya
+ */
 async function readStorage(
 	storageName: string,
 ): Promise<StorageSnippetInterface | null> {
@@ -109,6 +126,10 @@ async function readStorage(
 	return null;
 }
 
+/**
+ * Dipakai jika ada snippet yang diubah
+ * @param opt
+ */
 async function updateStorage(opt: UpdateStorageOption): Promise<void> {
 	const { snippetName, storageName, snippet } = opt;
 
@@ -135,25 +156,9 @@ async function updateStorage(opt: UpdateStorageOption): Promise<void> {
 	});
 }
 
-async function save(data: object): Promise<void> {
-	const compressed = zlib.gzipSync(JSON.stringify(data)).toString('base64');
-	await appContext.state.update(SnippetConstant.KeySync, compressed);
-}
-
-async function load(): Promise<object | null> {
-	const compressed = appContext.state.get<string>(SnippetConstant.KeySync);
-
-	if (!compressed) {
-		return null;
-	}
-
-	const decompressed = zlib
-		.gunzipSync(Buffer.from(compressed, 'base64'))
-		.toString();
-
-	return JSON.parse(decompressed);
-}
-
+/**
+ * Load storage yang kemudian akan dikirimkan ke webview
+ */
 async function loadStorages(webview: WebviewView): Promise<void> {
 	const storages = await readStorages();
 
@@ -163,6 +168,9 @@ async function loadStorages(webview: WebviewView): Promise<void> {
 	});
 }
 
+/**
+ * Untuk mengecek apakah ada snippet dengan prefix atau name tertentu yang sudah ada
+ */
 async function checkPrefixOrName(
 	opt: CheckPrefixOrNameOption,
 ): Promise<SnippetInterface | undefined> {
@@ -189,13 +197,14 @@ async function checkPrefixOrName(
 	return snippets.find((val) => val.name === key || val.prefix === key);
 }
 
+/**
+ * @returns Nama file storage berdasarkan workspace dan combine dengan SuffixStorage
+ */
 function convertToStorageName(workspaceName: string): string {
 	return `${workspaceName}${SnippetConstant.SuffixStorage}`;
 }
 
 const SnippetUtils = {
-	save,
-	load,
 	readStorage,
 	readStorages,
 	loadStorages,

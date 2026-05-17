@@ -38,6 +38,8 @@ function toCompletionItems(
 		});
 }
 
+// Untuk mendaftarkan semua snippet yang baru dibuat atau yang lama ke completion item
+// Agar terbaaca di autocompletion
 export async function registerSnippet(
 	context: vscode.ExtensionContext,
 ): Promise<vscode.Disposable> {

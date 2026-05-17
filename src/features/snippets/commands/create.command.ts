@@ -14,8 +14,8 @@ export function registerCreateSnippet(context: vscode.ExtensionContext) {
 	const command = vscode.commands.registerCommand(
 		'extension.createSnippet',
 		async (_) => {
-      await createSnippet();
-    },
+			await createSnippet();
+		},
 	);
 
 	context.subscriptions.push(command);
@@ -38,8 +38,8 @@ export async function createSnippet() {
 		}
 
 		const selectedText = editor.document.getText(editor.selection);
-    logger.log('selectedText', selectedText);
-logger.log('body', selectedText.split('\n'));
+		logger.log('selectedText', selectedText);
+		logger.log('body', selectedText.split('\n'));
 		if (!selectedText.trim()) {
 			vscode.window.showErrorMessage('Please select some text!');
 			return;
@@ -66,9 +66,9 @@ logger.log('body', selectedText.split('\n'));
 		}
 
 		const alreadyExists = await SnippetUtils.checkPrefixOrName({
-      key: snippetName,
-      storageName: wsp.workspaceName
-    });
+			key: snippetName,
+			storageName: wsp.workspaceName,
+		});
 
 		if (alreadyExists) {
 			vscode.window.showWarningMessage(
@@ -121,8 +121,11 @@ async function saveNewSnippet(opts: {
 		snippets: [...(existing?.snippets ?? []), newSnippet],
 	};
 
-	await appContext.storage.writeFile({ filename, content: updated, overWrite:true });
-	await saveSyncSnippet();
+	await appContext.storage.writeFile({
+		filename,
+		content: updated,
+		overWrite: true,
+	});
 
 	const listSnippets = await SnippetUtils.readStorages();
 	appContext.webview.postMessage(
@@ -152,14 +155,4 @@ async function ensureGroupSnippetExists(
 	};
 
 	await appContext.storage.writeFile({ filename, content: initial });
-}
-
-async function saveSyncSnippet(): Promise<void> {
-	const listSnippets = await SnippetUtils.readStorages();
-
-	const dataCompressed = Object.fromEntries(
-		listSnippets.map((val) => [val.name, val]),
-	) satisfies Record<string, StorageSnippetInterface>;
-
-	await SnippetUtils.save(dataCompressed);
 }

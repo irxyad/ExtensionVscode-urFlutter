@@ -2,7 +2,6 @@ import { ActionBridgeWebview } from '@webview/webview.constants';
 
 export const SnippetConstant = {
 	SuffixStorage: '-mysnippets.json',
-	KeySync: 'my-snippet',
 	TitlePrefix: '// @prefix ',
 };
 
