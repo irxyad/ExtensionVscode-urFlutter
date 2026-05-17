@@ -1,6 +1,5 @@
 import { appContext } from '@common/app-context';
 import { WorkspaceInterface } from '@common/types/workspace.types';
-import { logger } from '@common/utils/logger.utils';
 import ValidationUtils from '@common/utils/validation.utils';
 import SnippetUtils from '@features/snippets/snippet.utils';
 import {
@@ -38,8 +37,6 @@ export async function createSnippet() {
 		}
 
 		const selectedText = editor.document.getText(editor.selection);
-		logger.log('selectedText', selectedText);
-		logger.log('body', selectedText.split('\n'));
 		if (!selectedText.trim()) {
 			vscode.window.showErrorMessage('Please select some text!');
 			return;

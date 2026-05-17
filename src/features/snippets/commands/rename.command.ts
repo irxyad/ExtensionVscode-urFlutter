@@ -1,6 +1,5 @@
 import { appContext } from '@common/app-context';
 import { AppConstant } from '@common/constants/common.constants';
-import { logger } from '@common/utils/logger.utils';
 import StringUtils from '@common/utils/string.utils';
 import ValidationUtils from '@common/utils/validation.utils';
 import { VscodeMessage } from '@common/utils/vscode-message.utils';
@@ -30,7 +29,6 @@ export async function renameSnippetName(
 		// Kalau file snippetnya terbuka, kasih warning dan gk bisa rename
 		// harus di tutup dulu biar bisa handle pengecekan [checkPrefixOrName]
 		if (allOpenFiles.includes(filename)) {
-			logger.log('Active Window:', allOpenFiles);
 			VscodeMessage.error(
 				`Please close this file "${filename}" before renaming`,
 				'',

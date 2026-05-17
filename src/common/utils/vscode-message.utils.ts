@@ -15,7 +15,7 @@ export const VscodeMessage = {
 	},
 
 	success(message: string = 'Success'): void {
-		logger.debug(message);
+		logger.log(message);
 		vscode.window.showInformationMessage(message);
 	},
 

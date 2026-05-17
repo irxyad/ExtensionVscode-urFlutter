@@ -1,3 +1,4 @@
+import { appContext } from '@common/app-context';
 import { AppConstant } from '@common/constants/common.constants';
 import * as vscode from 'vscode';
 
@@ -26,7 +27,9 @@ class Logger {
 	}
 
 	log(message: string, data?: unknown): void {
-		this._channel?.info(message, data ?? '');
+		if (appContext.extension.isDevelopment) {
+			this._channel?.info(message, data ?? '');
+		}
 	}
 
 	instruction(label: string, instructions: string[]): void {

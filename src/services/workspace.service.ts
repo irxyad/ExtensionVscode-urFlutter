@@ -7,7 +7,7 @@ export class WorkspaceService {
 		const folders = vscode.workspace.workspaceFolders;
 
 		if (!folders?.length) {
-			logger.error('Tidak ada folder yang dibuka di workspace.');
+			logger.error('No workspace folder open');
 			return null;
 		}
 

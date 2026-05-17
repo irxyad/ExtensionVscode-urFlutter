@@ -2,7 +2,6 @@ import ProjectPath from '@common/constants/project-path.constants';
 import { AppError } from '@common/error/app.error';
 import FileUtils from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
-import { logger } from '@common/utils/logger.utils';
 import PubspecUtils from '@common/utils/pubspec.utils';
 import { PseudoTerminalService } from '@services/pseudo-terminal.service';
 import { TerminalService } from '@services/terminal.service';
@@ -159,8 +158,6 @@ async function configurationApp(opt: ConfigurationAppOptions) {
 		try {
 			await injectToMain();
 		} catch (error) {
-			logger.error('Error Inject to main:', error);
-
 			throw new AppError(`Failed to inject to main:`, error);
 		}
 	}
@@ -169,8 +166,6 @@ async function configurationApp(opt: ConfigurationAppOptions) {
 	try {
 		await createAppLocalization(hasAppLocalization, locales);
 	} catch (error) {
-		logger.error('Error Inject to main:', error);
-
 		throw new AppError(`Failed to create app_localizations:`, error);
 	}
 
