@@ -1,3 +1,4 @@
+import { ExtensionService } from '@services/extension.service';
 import { GlobalStateService } from '@services/global-state.service';
 import { GlobalStorageService } from '@services/global-storage.service';
 import { WebviewService } from '@services/webview.service';
@@ -13,6 +14,7 @@ class AppContext {
 	private _state: GlobalStateService | undefined;
 	private _workspace: WorkspaceService | undefined;
 	private _webview: WebviewService | undefined;
+	private _extension: ExtensionService | undefined;
 
 	private constructor() {}
 
@@ -35,6 +37,7 @@ class AppContext {
 		this._storage = new GlobalStorageService(context);
 		this._workspace = new WorkspaceService();
 		this._webview = new WebviewService();
+    this._extension = new ExtensionService();
 	}
 
 	get context(): vscode.ExtensionContext {
@@ -69,6 +72,10 @@ class AppContext {
 		return this.context.extension.packageJSON.version;
 	}
 
+  get extension(): ExtensionService {
+    return this.assertInitialized(this._extension, 'extension');
+  }
+
 	private assertInitialized<T>(value: T | undefined, name: string): T {
 		if (value === undefined) {
 			throw new Error(
@@ -86,6 +93,7 @@ class AppContext {
 		this._workspace = undefined;
 		this._context = undefined;
 		this._webview = undefined;
+    this._extension = undefined;
 	}
 }
 
