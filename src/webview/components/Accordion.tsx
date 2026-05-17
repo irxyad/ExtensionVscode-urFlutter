@@ -54,43 +54,45 @@ export function Accordion({
 					</div>
 				</div>
 				<div className="content">
-					{children.map((val, index) => (
-						<div
-							id={val.id}
-							key={val.id}
-							className="content-item"
-							tabIndex={0}
-							role="button"
-							title={tooltipChildren?.(index)}
-							onClick={() =>
-								onClickChildren
-									? onClickChildren(val)
-									: postMessageToExtension(val.id)
-							}>
-							<div className="child">
-								<span>{val.title}</span>
-								{val.group && (
-									<span
-										className="badge"
-										style={
-											val.badgeColor
-												? {
-														backgroundColor: hexToRgba(val.badgeColor, 0.1),
-														borderColor: val.badgeColor,
-														border: '1px solid',
-														color: val.badgeColor,
-													}
-												: {}
-										}>
-										{val.group.firstUppercase}
-									</span>
-								)}
-							</div>
-							{actionsChildren && (
-								<div className="actions">{actionsChildren(val)}</div>
-							)}
-						</div>
-					))}
+					{children.isEmpty
+						? (<p className='txt-snippet-empty'>Snippet is empty</p>)
+						: children.map((val, index) => (
+								<div
+									id={val.id}
+									key={val.id}
+									className="content-item"
+									tabIndex={0}
+									role="button"
+									title={tooltipChildren?.(index)}
+									onClick={() =>
+										onClickChildren
+											? onClickChildren(val)
+											: postMessageToExtension(val.id)
+									}>
+									<div className="child">
+										<span>{val.title}</span>
+										{val.group && (
+											<span
+												className="badge"
+												style={
+													val.badgeColor
+														? {
+																backgroundColor: hexToRgba(val.badgeColor, 0.1),
+																borderColor: val.badgeColor,
+																border: '1px solid',
+																color: val.badgeColor,
+															}
+														: {}
+												}>
+												{val.group.firstUppercase}
+											</span>
+										)}
+									</div>
+									{actionsChildren && (
+										<div className="actions">{actionsChildren(val)}</div>
+									)}
+								</div>
+							))}
 				</div>
 			</div>
 		</div>

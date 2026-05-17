@@ -21,6 +21,8 @@ import {
   deleteGroupSnippet,
   deleteSnippet,
 } from '@features/snippets/commands/delete.command';
+import { editSnippet } from '@features/snippets/commands/edit.command';
+import { renameSnippetName } from '@features/snippets/commands/rename.command';
 import SnippetUtils from '@features/snippets/snippet.utils';
 import {
   ActionBridgeWebview,
@@ -91,38 +93,32 @@ const messageHandlers: Partial<Record<string, MessageHandler>> = {
 
 	// Snippet handlers
 	[ActionBridgeWebview.GetSnippets]: async (_, webview) => {
-		const listSnippets = await SnippetUtils.readStorages();
+		const storages = await SnippetUtils.readStorages();
 
 		webview.postMessage({
 			action: ReturnBridgeWebview.SnippetsData,
-			data: listSnippets,
+			data: storages,
 		});
 	},
-	[ActionBridgeWebview.DeleteGroupSnippet]: async (extra, webview) => {
-		const isDeleted = await deleteGroupSnippet(extra.storageName);
+	[ActionBridgeWebview.DeleteGroupSnippet]: async (storageName, webview) => {
+		const isDeleted = await deleteGroupSnippet(storageName);
+
 		if (isDeleted) {
-			webview.postMessage({ action: ActionBridgeWebview.IsDeletedSnippet });
+			webview.postMessage({ action: ReturnBridgeWebview.IsDeletedSnippet });
 		}
 	},
 	[ActionBridgeWebview.DeleteSnippet]: async (extra, webview) => {
-		const isDeleted = await deleteSnippet(extra.props);
+		const isDeleted = await deleteSnippet(extra);
+
 		if (isDeleted) {
-			webview.postMessage({ action: ActionBridgeWebview.IsDeletedSnippet });
+			webview.postMessage({ action: ReturnBridgeWebview.IsDeletedSnippet });
 		}
 	},
 	[ActionBridgeWebview.EditSnippet]: async (extra) => {
-		SnippetUtils.edit({
-			snippetName: extra.snippetName,
-			storage: extra.storage,
-		});
+		editSnippet(extra);
 	},
-	[ActionBridgeWebview.RenameSnippet]: async (extra, webview) => {
-		const isRenamed = await SnippetUtils.rename({
-			snippetName: extra.snippetName,
-			storage: extra.storage,
-      rename: extra.rename,
-		});
-
+	[ActionBridgeWebview.RenameSnippet]: async (extra) => {
+		await renameSnippetName(extra);
 	},
 	[ActionBridgeWebview.Log]: async (message) => {
 		const { level, message: msg, data } = message;

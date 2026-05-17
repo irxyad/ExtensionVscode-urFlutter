@@ -46,17 +46,7 @@ async function copyTemplate({
 	await fs.copy(sourcePath, targetPath, { overwrite: true });
 }
 
-/**
- * Format text. cth: "hello_world" ke "Hello World"
- */
-function formatToTitle(text: string): string {
-	return text
-		.replace(/[_-]/g, ' ')
-		.split(' ')
-		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-		.join(' ');
-}
 
-const ProjectUtils = { getUri, copyTemplate, formatToTitle };
+const ProjectUtils = { getUri, copyTemplate };
 
 export default ProjectUtils;

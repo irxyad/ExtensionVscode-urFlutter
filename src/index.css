@@ -383,6 +383,12 @@ footer .portfolio-link:hover {
 	display: block;
 }
 
+.accordion .txt-snippet-empty{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .accordion .header {
 	padding: 12px;
 	font-size: 14px;

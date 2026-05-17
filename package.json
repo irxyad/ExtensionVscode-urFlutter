@@ -28,6 +28,14 @@
 	},
 	"main": "./out/extension.js",
 	"contributes": {
+		"languages": [
+			{
+				"id": "dart",
+				"extensions": [
+					".dart.snippet"
+				]
+			}
+		],
 		"viewsContainers": {
 			"activitybar": [
 				{

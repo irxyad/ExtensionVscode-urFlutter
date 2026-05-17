@@ -1,3 +1,4 @@
+import { AppError } from '@common/error/app.error';
 import * as vscode from 'vscode';
 
 export class GlobalStorageService {
@@ -20,12 +21,24 @@ export class GlobalStorageService {
 	async writeFile<T>({
 		filename,
 		content,
+		overWrite = false,
 	}: {
 		filename: string;
+		overWrite?: boolean;
 		content: T;
 	}): Promise<vscode.Uri> {
 		const uri = vscode.Uri.joinPath(this.context.globalStorageUri, filename);
 		const data = Buffer.from(JSON.stringify(content, null, 2));
+
+		const exists = await this.exists(filename);
+
+		if (exists) {
+			if (!overWrite) {
+				throw new AppError(`File ${filename} already exists`);
+			}
+
+			await vscode.workspace.fs.delete(uri, { useTrash: false });
+		}
 
 		await vscode.workspace.fs.writeFile(uri, data);
 		return uri;

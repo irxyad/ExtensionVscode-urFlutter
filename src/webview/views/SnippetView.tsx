@@ -1,6 +1,8 @@
 import { SnippetAction } from '@features/snippets/snippet.constants';
 import {
-  DeleteorRenameSnippetProp,
+  ActionSnippetOption,
+  EditSnippetOption,
+  RenameSnippetNameOption,
   StorageSnippetInterface,
 } from '@features/snippets/types/snippet.types';
 import { postMessageToExtension } from '@webview/utils/bridge.utils';
@@ -27,7 +29,7 @@ function SnippetView() {
 			}
 
 			// Kalau delete sukses, fetch ulang
-			if (message.action === ActionBridgeWebview.IsDeletedSnippet) {
+			if (message.action === ReturnBridgeWebview.IsDeletedSnippet) {
 				postMessageToExtension(ActionBridgeWebview.GetSnippets);
 				setIsLoading(true);
 			}
@@ -39,23 +41,19 @@ function SnippetView() {
 
 	function deleteGroupSnippets(storageName: string) {
 		postMessageToExtension(ActionBridgeWebview.DeleteGroupSnippet, {
-			extra: {
-				storageName: storageName,
-			},
+			extra: storageName,
 		});
 	}
 
-	function deleteSnippets(props: DeleteorRenameSnippetProp) {
+	function deleteSnippets(props: ActionSnippetOption) {
 		postMessageToExtension(ActionBridgeWebview.DeleteSnippet, {
-			extra: {
-				props,
-			},
+			extra: props,
 		});
 	}
 
 	return (
 		<div className="snippet-view">
-      <p>Snippets are grouped by their workspace/project.</p>
+			<p>Snippets are grouped by their workspace/project.</p>
 
 			{isLoading ? (
 				<p>Loading snippets...</p>
@@ -73,14 +71,14 @@ function SnippetView() {
 							<Accordion
 								key={storage.name}
 								id={storage.name}
-								title={storage.name}
+								title={storage.name.toTitleCase}
 								children={accordionItems}
 								onClickChildren={(val) => {
 									postMessageToExtension(ActionBridgeWebview.EditSnippet, {
 										extra: {
-											snippetName: val.title,
+											snippetName: val.id,
 											storage: storage,
-										},
+										} satisfies EditSnippetOption,
 									});
 								}}
 								tooltip={`From Workspace: ${storage.metadata.uri_workspace}`}
@@ -92,51 +90,54 @@ function SnippetView() {
 										key={`delete-group-${storage.name}`}
 										id={storage.name}
 										className="btn-delete-group-snippet"
-										data-action={SnippetAction.DeleteGroupSnippet}
+										data-action={SnippetAction.DeleteStorage}
 										onClick={() => deleteGroupSnippets(storage.name)}
 										title="Delete this group and all snippets">
 										&times;
 									</button>,
 								]}
-								actionsChildren={(val) => [
-									<button
-										key={`delete-${val.id}`}
-										id={val.id}
-										className="btn-delete-snippet"
-										data-action={SnippetAction.DeleteSnippet}
-										onClick={(e) => {
-											e.stopPropagation();
+								actionsChildren={(val) => {
+                  return [
+                    <button
+                      key={`delete-${val.id}`}
+                      id={val.id}
+                      className="btn-delete-snippet"
+                      data-action={SnippetAction.Delete}
+                      onClick={(e) => {
+                        e.stopPropagation();
 
-											deleteSnippets({
-												groupSnippet: storage.name,
-												keySnippet: val.id,
-											});
-										}}
-										title="Delete this snippet">
-										&times;
-									</button>,
-									<button
-										key={`rename-${val.id}`}
-										id={val.id}
-										className="btn-rename-snippet"
-										data-action={SnippetAction.RenameSnippet}
-										onClick={(e) => {
-											e.stopPropagation();
+                        deleteSnippets({
+                          storage: storage,
+                          snippetName: val.id,
+                        });
+                      } }
+                      title="Delete this snippet">
+                      &times;
+                    </button>,
 
-											postMessageToExtension(
-												ActionBridgeWebview.RenameSnippet,
-												{
-													extra: {
-														snippetName: val.id,
-														storage: storage,
-													},
-												},
-											);
-										}}
-										title="Rename this snippet">
-										&#128393;
-									</button>,
-								]}
+                    <button
+                      key={`rename-${val.id}`}
+                      id={val.id}
+                      className="btn-rename-snippet"
+                      data-action={SnippetAction.Rename}
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        postMessageToExtension(
+                          ActionBridgeWebview.RenameSnippet,
+                          {
+                            extra: {
+                              snippetName: val.id,
+                              storage: storage,
+                            }satisfies RenameSnippetNameOption ,
+                          }
+                        );
+                      } }
+                      title="Rename this snippet">
+                      &#128393;
+                    </button>,
+                  ];
+                }}
 							/>
 						);
 					})}

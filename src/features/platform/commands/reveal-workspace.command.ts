@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export function revealWorkspace(
+export function registerRevealWorkspace(
 	context: vscode.ExtensionContext,
 ) {
 	const reveal = vscode.commands.registerCommand(

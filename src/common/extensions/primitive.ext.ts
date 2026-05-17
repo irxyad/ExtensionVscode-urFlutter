@@ -1,6 +1,11 @@
 declare global {
 	interface String {
 		get firstUppercase(): string;
+		/**
+		 * Format text. cth: "hello_world" ke "Hello World"
+		 */
+		get toTitleCase(): string;
+    get isEmpty(): boolean;
 	}
 
 	interface Array<T> {
@@ -24,6 +29,17 @@ function defineGetter<T extends object>(
 // String
 defineGetter(String.prototype, 'firstUppercase', function () {
 	return this.charAt(0).toUpperCase() + this.slice(1);
+});
+
+defineGetter(String.prototype, 'toTitleCase', function () {
+	return this.replace(/[_-]/g, ' ')
+		.split(' ')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(' ');
+});
+
+defineGetter(String.prototype, 'isEmpty', function () {
+	return this.length === 0;
 });
 
 // Array

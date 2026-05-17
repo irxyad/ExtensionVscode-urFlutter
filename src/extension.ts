@@ -4,25 +4,25 @@ import StorageKey from '@common/constants/storage-key.constants';
 import '@common/extensions/primitive.ext';
 import { logger } from '@common/utils/logger.utils';
 import { generateFromToEntity } from '@features/generate/commands/entity.command';
-import { revealWorkspace } from '@features/platform/commands/reveal-workspace.command';
+import { registerRevealWorkspace } from '@features/platform/commands/reveal-workspace.command';
 import { initFolder } from '@features/project/commands/init-folder.command';
-import { autoLoadSnippets } from '@features/snippets/commands/auto-load.command';
-import { createSnippet } from '@features/snippets/commands/create.command';
+import { registerSnippet } from '@features/snippets/commands/auto-load.command';
+import { registerCreateSnippet } from '@features/snippets/commands/create.command';
 import { WebViewProvider } from '@webview/webview.provider';
 import * as vscode from 'vscode';
 
 async function registerAll(context: vscode.ExtensionContext) {
 	// Load snippets
-	const loadMySnippets = await autoLoadSnippets(context);
+	const loadMySnippets = await registerSnippet(context);
 
 	// Register create snippet command
-	createSnippet(context);
+	registerCreateSnippet(context);
 
-  // Register reveal workspace
-  // Digunakan di hover snippet agar bisa diklik ke workspace
-  revealWorkspace(context);
+	// Register reveal workspace
+	// Digunakan di hover snippet agar bisa diklik ke workspace
+	registerRevealWorkspace(context);
 
-  // Belum diperbaiki template nya jadi kita skip dulu handleAutoInitFolder
+	// Belum diperbaiki template nya jadi kita skip dulu handleAutoInitFolder
 
 	// Handle auto init folder
 	// await handleAutoInitFolder();

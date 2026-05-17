@@ -5,8 +5,6 @@ export const ActionBridgeWebview = {
   EditSnippet: 'editSnippet',
   DeleteSnippet: 'deleteSnippet',
   RenameSnippet: 'renameSnippet',
-  IsDeletedSnippet: 'isDeletedSnippet',
-  IsRenamedSnippet: 'isRenamedSnippet',
   EditGroupSnippet: 'editGroupSnippet',
   Log: 'log',
   LoadStorageSnippets:'loadStorageSnippets',
@@ -15,4 +13,7 @@ export const ActionBridgeWebview = {
 // constant yang kita dapat dari extension ke webview
 export const ReturnBridgeWebview = {
   SnippetsData: 'snippetsData',
+  IsDeletedSnippet: 'isDeletedSnippet',
+  IsRenamedSnippet: 'isRenamedSnippet',
+
 };
