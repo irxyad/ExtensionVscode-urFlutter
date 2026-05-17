@@ -1,5 +1,4 @@
-import * as vscode from 'vscode';
-import { logger } from '../utils/logger.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 
 export function getErrorMessage(error: unknown): string {
 	if (error instanceof Error) {
@@ -10,8 +9,7 @@ export function getErrorMessage(error: unknown): string {
 
 export function handleError(error: unknown, context?: string): void {
 	const msg = error instanceof Error ? error.message : String(error);
-	const fullMsg = context ? `[${context}] ${msg}` : msg;
+	const fullMsg = context ? `[${context}]: ${msg}` : msg;
 
-	vscode.window.showErrorMessage(fullMsg);
-	logger.error(fullMsg, error);
+	VscodeMessage.error(fullMsg);
 }

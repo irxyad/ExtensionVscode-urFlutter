@@ -1,6 +1,7 @@
 import { appContext } from '@common/app-context';
 import { WorkspaceInterface } from '@common/types/workspace.types';
 import ValidationUtils from '@common/utils/validation.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import SnippetUtils from '@features/snippets/snippet.utils';
 import {
   SnippetInterface,
@@ -24,21 +25,19 @@ export async function createSnippet() {
 	try {
 		const wsp = appContext.workspace.getWorkspaceFolder();
 		if (!wsp) {
-			vscode.window.showErrorMessage(
-				"Can't create, no workspace folder found.",
-			);
+			VscodeMessage.error("Can't create, no workspace folder found.");
 			return;
 		}
 
 		const editor = vscode.window.activeTextEditor;
 		if (!editor) {
-			vscode.window.showErrorMessage('Please open a file first!');
+			VscodeMessage.error('Please open a file first!');
 			return;
 		}
 
 		const selectedText = editor.document.getText(editor.selection);
 		if (!selectedText.trim()) {
-			vscode.window.showErrorMessage('Please select some text!');
+			VscodeMessage.error('Please select some text!');
 			return;
 		}
 
@@ -58,7 +57,7 @@ export async function createSnippet() {
 		});
 
 		if (!snippetName) {
-			vscode.window.showWarningMessage('Snippet creation canceled.');
+			VscodeMessage.info('Snippet creation canceled.');
 			return;
 		}
 
@@ -68,9 +67,7 @@ export async function createSnippet() {
 		});
 
 		if (alreadyExists) {
-			vscode.window.showWarningMessage(
-				`Snippet "${snippetName}" already exists.`,
-			);
+			VscodeMessage.warning(`Snippet "${snippetName}" already exists.`);
 			return;
 		}
 
@@ -81,9 +78,9 @@ export async function createSnippet() {
 			selectedText,
 		});
 
-		vscode.window.showInformationMessage(`Snippet "${snippetName}" created!`);
+		VscodeMessage.success('Snippet created successfully!');
 	} catch (e) {
-		vscode.window.showErrorMessage(`Failed to create snippet: ${e}`);
+		VscodeMessage.error(e, 'Failed to create snippet');
 	}
 }
 

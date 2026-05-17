@@ -1,6 +1,8 @@
-import DartUtils from '@common/utils/dart.utils';
 import FileUtils from '@common/utils/file.utils';
+import FlutterUtils from '@common/utils/flutter.utils';
+import ProjectUtils from '@common/utils/project.utils';
 import PubspecUtils from '@common/utils/pubspec.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import { execScriptLauncherDev } from '@features/generate/commands/launcher-icon.command';
 import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
@@ -35,11 +37,12 @@ const _generate = async (terminal: TerminalService) => {
 				await copyingData();
 
 				progress.report({ increment: 30, message: 'Installing packages...' });
-				await PubspecUtils.init(terminal, {
-					assets: ProjectConstant.PubspecAssets,
-					devPackages: ProjectConstant.DevPackages,
-					packages: ProjectConstant.Packages,
-				});
+				await PubspecUtils.installPackages(terminal, ProjectConstant.Packages);
+				await PubspecUtils.installDevPackages(
+					terminal,
+					ProjectConstant.DevPackages,
+				);
+				await PubspecUtils.addAssets(ProjectConstant.DevPackages);
 
 				progress.report({
 					increment: 30,
@@ -52,15 +55,14 @@ const _generate = async (terminal: TerminalService) => {
 
 				progress.report({ increment: 10, message: 'Initialization complete.' });
 			} catch (error) {
-				const msg = error instanceof Error ? error.message : String(error);
-				vscode.window.showErrorMessage(`❌ Error initializing folder: ${msg}`);
+				VscodeMessage.error(error, 'Error initializing folder');
 			}
 		},
 	);
 };
 
 async function copyingData(): Promise<void> {
-	await FileUtils.copyTemplate({
+	await ProjectUtils.copyTemplate({
 		sourceFolder: 'templates/',
 		destFolder: '\\',
 	});
@@ -71,12 +73,12 @@ async function updateBuildGradleKts(): Promise<void> {
 		'android/app/build.gradle.kts',
 	);
 	if (!uri) {
-		vscode.window.showErrorMessage('File build.gradle.kts not found.');
+		VscodeMessage.error('File build.gradle.kts not found.');
 		return;
 	}
 
-	const projectName = await DartUtils.getFlutterProjectName();
-	const contentBuildGradle = await FileUtils.getText(uri);
+	const projectName = await FlutterUtils.getProjectName();
+	const contentBuildGradle = await FileUtils.read(uri);
 
 	const keystoreImport = `
 import java.util.Properties
@@ -91,11 +93,14 @@ if (keystorePropertiesFile.exists()) {
   `;
 
 	if (!contentBuildGradle.includes(keystoreImport.trim())) {
-		const pluginsLine = await FileUtils.findLinesWithKeyword(uri, 'plugins');
+		const pluginsLine = await FileUtils.findLine(uri, 'plugins');
 		if (pluginsLine !== null) {
-			await FileUtils.insertTextAtLine(uri, {
-				addText: keystoreImport,
-				line: pluginsLine,
+			await FileUtils.edit({
+				filePath: vscode.workspace.asRelativePath(uri),
+				insertAt: {
+					text: keystoreImport,
+					line: pluginsLine + 1,
+				},
 			});
 		}
 	}
@@ -138,21 +143,22 @@ if (keystorePropertiesFile.exists()) {
   `;
 
 	if (!contentBuildGradle.includes(flavorsBlock.trim())) {
-		const buildTypesLine = await FileUtils.findLinesWithKeyword(
-			uri,
-			'buildTypes {',
-		);
+		const buildTypesLine = await FileUtils.findLine(uri, 'buildTypes {');
+
 		if (buildTypesLine !== null) {
-			await FileUtils.insertTextAtLine(uri, {
-				addText: flavorsBlock,
-				line: buildTypesLine,
+			await FileUtils.edit({
+				filePath: vscode.workspace.asRelativePath(uri),
+				insertAt: {
+					text: flavorsBlock,
+					line: buildTypesLine + 1,
+				},
 			});
 		}
 	}
 }
 
 async function doSomeTweaks(terminal: TerminalService): Promise<void> {
-	const projectName = await DartUtils.getFlutterProjectName();
+	const projectName = await FlutterUtils.getProjectName();
 
 	const filesToDelete = ['lib/main.dart', 'test/widget_test.dart'];
 
@@ -170,25 +176,25 @@ async function doSomeTweaks(terminal: TerminalService): Promise<void> {
 			'lib/core/constants/app_constants.dart',
 		);
 		if (appConstants) {
-			await FileUtils.updateLineWithKeyword(
-				appConstants,
-				'appName',
-				`  static const appName = "${projectName}";`,
-			);
+			await FileUtils.updateLine({
+				filePath: vscode.workspace.asRelativePath(appConstants),
+				keyword: 'appName',
+				newText: `  static const appName = "${projectName}";`,
+			});
 		}
 
 		const [titleApp] = await vscode.workspace.findFiles(
 			'lib/app/view/app.dart',
 		);
 		if (titleApp) {
-			await FileUtils.updateLineWithKeyword(
-				titleApp,
-				'title',
-				`            title: "${projectName}",`,
-			);
+			await FileUtils.updateLine({
+				filePath: vscode.workspace.asRelativePath(titleApp),
+				keyword: 'title',
+				newText: `            title: "${projectName}",`,
+			});
 		}
 	}
 
-	await FileUtils.deleteFile('flutter_launcher_icons.yaml');
+	await FileUtils.delete('flutter_launcher_icons.yaml');
 	await execScriptLauncherDev(terminal);
 }

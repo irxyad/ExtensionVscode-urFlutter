@@ -1,4 +1,6 @@
 import FileUtils from '@common/utils/file.utils';
+import ProjectUtils from '@common/utils/project.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import { TerminalService } from '@services/terminal.service';
 import * as vscode from 'vscode';
 const parentLauncherIconsYaml = 'launcher_icons_flavors';
@@ -30,7 +32,7 @@ export default async function buildLauncherIcon(): Promise<void> {
 	});
 
 	if (!selection) {
-		vscode.window.showWarningMessage('Operation cancelled.');
+    VscodeMessage.info('Operation cancelled.');
 		return;
 	}
 
@@ -44,7 +46,7 @@ export default async function buildLauncherIcon(): Promise<void> {
 }
 
 function showInfoMsg(): void {
-	vscode.window.showInformationMessage('Launcher icon built successfully!');
+  VscodeMessage.success('Launcher icon built successfully!');
 
 	outputChannel.clear();
 	outputChannel.appendLine('Launcher icons generated successfully!');
@@ -74,7 +76,7 @@ export async function generateLauncherIcon(): Promise<void> {
 	});
 
 	if (!selection) {
-		vscode.window.showWarningMessage('Operation cancelled.');
+    VscodeMessage.info('Operation cancelled.');
 		return;
 	}
 
@@ -98,7 +100,7 @@ export async function execScriptDefaultLauncher(
 	terminal: TerminalService,
 ): Promise<void> {
 	if (!(await hasFile(filenameDefaultYaml))) {
-		vscode.window.showErrorMessage(`${filenameDefaultYaml} not found`);
+		VscodeMessage.error(`${filenameDefaultYaml} not found`);
 		return;
 	}
 	await ensureInstallLauncherIcons(terminal);
@@ -109,7 +111,7 @@ export async function execScriptLauncherDev(
 	terminal: TerminalService,
 ): Promise<void> {
 	if (!(await hasFile(filenameDevYaml))) {
-		vscode.window.showErrorMessage(`${filenameDevYaml} not found`);
+		VscodeMessage.error(`${filenameDevYaml} not found`);
 		return;
 	}
 	await ensureInstallLauncherIcons(terminal);
@@ -123,7 +125,7 @@ export async function execScriptLauncherStag(
 	terminal: TerminalService,
 ): Promise<void> {
 	if (!(await hasFile(filenameStagYaml))) {
-		vscode.window.showErrorMessage(`${filenameStagYaml} not found`);
+		VscodeMessage.error(`${filenameStagYaml} not found`);
 		return;
 	}
 	await ensureInstallLauncherIcons(terminal);
@@ -137,7 +139,7 @@ export async function execScriptLauncherProd(
 	terminal: TerminalService,
 ): Promise<void> {
 	if (!(await hasFile(filenameProdYaml))) {
-		vscode.window.showErrorMessage(`${filenameProdYaml} not found`);
+		VscodeMessage.error(`${filenameProdYaml} not found`);
 		return;
 	}
 	await ensureInstallLauncherIcons(terminal);
@@ -153,7 +155,7 @@ async function copyIfMissing(
 	destFolder: string,
 ): Promise<void> {
 	if (!(await hasFile(filename))) {
-		await FileUtils.copyTemplate({ sourceFolder, destFolder });
+		await ProjectUtils.copyTemplate({ sourceFolder, destFolder });
 	}
 }
 
@@ -206,7 +208,7 @@ async function buildLauncherFlavor(): Promise<void> {
 }
 
 async function removeYamlDefault(): Promise<void> {
-	await FileUtils.deleteFile(`\\${filenameDefaultYaml}`);
+	await FileUtils.delete(`\\${filenameDefaultYaml}`);
 }
 
 async function removeYamlFlavors(): Promise<void> {

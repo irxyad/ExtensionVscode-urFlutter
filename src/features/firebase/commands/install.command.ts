@@ -3,6 +3,7 @@ import { handleError } from '@common/error/error.utils';
 import FileUtils from '@common/utils/file.utils';
 import FlutterUtils from '@common/utils/flutter.utils';
 import ProjectUtils from '@common/utils/project.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import { TerminalService } from '@services/terminal.service';
 import fs from 'fs';
 import path from 'path';
@@ -49,7 +50,8 @@ async function startInstalling(terminal: TerminalService) {
 
 			token.onCancellationRequested(() => {
 				terminal.dispose();
-				vscode.window.showWarningMessage('Firebase installation cancelled.');
+
+				VscodeMessage.info('Firebase installation cancelled.');
 			});
 
 			try {
@@ -124,9 +126,7 @@ async function startInstalling(terminal: TerminalService) {
 				progress.report({ message: 'Injecting Firebase init... (4/4)' });
 				await configFirebase();
 
-				vscode.window.showInformationMessage(
-					'Firebase installed & configured!',
-				);
+				VscodeMessage.success('Firebase installed & configured!');
 			} catch (err) {
 				if (!token.isCancellationRequested) {
 					handleError(err, 'installFirebase');

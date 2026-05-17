@@ -91,6 +91,7 @@ async function findMainFile(
 			'Main.dart or init_main.dart not found',
 			instructions ? 'Show Instructions' : 'OK',
 		);
+
 		if (action === 'Show Instructions') {
 			logger.instruction(label, [...instructionsText, ...(instructions ?? [])]);
 		}

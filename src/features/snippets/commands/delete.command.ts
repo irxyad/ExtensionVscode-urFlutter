@@ -1,4 +1,5 @@
 import { appContext } from '@common/app-context';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import * as vscode from 'vscode';
 import SnippetUtils from '../snippet.utils';
 import { ActionSnippetOption } from '../types/snippet.types';
@@ -7,9 +8,7 @@ export async function deleteGroupSnippet(name: string): Promise<boolean> {
 	const uri = await SnippetUtils.getUriByWsName(name);
 
 	if (!uri) {
-		vscode.window.showErrorMessage(
-			`Group snippet with name "${name}" not found.`,
-		);
+		VscodeMessage.error(`Group snippet with name "${name}" not found.`);
 		return false;
 	}
 
@@ -21,8 +20,7 @@ export async function deleteGroupSnippet(name: string): Promise<boolean> {
 
 		return true;
 	} catch (error) {
-		vscode.window.showErrorMessage(`Failed to delete group snippet: ${error}`);
-
+		VscodeMessage.error(`Failed to delete group snippet: ${error}`);
 		return false;
 	}
 }
@@ -33,7 +31,7 @@ export async function deleteSnippet(
 		const storage = await SnippetUtils.readStorage(props.storage.name);
 
 		if (!storage) {
-			vscode.window.showErrorMessage(`Failed to read storage.`);
+			VscodeMessage.error('Failed to read storage.');
 			return false;
 		}
 
@@ -62,7 +60,7 @@ export async function deleteSnippet(
 		);
 		return true;
 	} catch (error) {
-		vscode.window.showErrorMessage(`Failed to delete snippet: ${error}`);
+		VscodeMessage.error(error, 'Failed to delete snippet');
 		return false;
 	}
 }

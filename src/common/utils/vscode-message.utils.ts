@@ -3,14 +3,14 @@ import * as vscode from 'vscode';
 import { logger } from './logger.utils';
 
 export const VscodeMessage = {
-	error(error: unknown, message: string = 'An error occurred'): void {
+	error(error: unknown, title: string = ''): void {
 		const err = error instanceof AppError ? error.message : String(error);
-		logger.error(`${message}: ${err}`);
+		logger.error(`${title}: ${err}`);
 
-		if (message.isEmpty) {
+		if (title.isEmpty) {
 			vscode.window.showErrorMessage(err);
 		} else {
-			vscode.window.showErrorMessage(`${message}: ${err}`);
+			vscode.window.showErrorMessage(`${title}: ${err}`);
 		}
 	},
 

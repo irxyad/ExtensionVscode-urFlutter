@@ -17,10 +17,10 @@ export async function renameSnippetName(
 	try {
 		// Untuk mendapatkan semua file yang terbuka dan hanya mengambil filenamenya saja
 		const allOpenFiles = vscode.window.tabGroups.all
-    .flatMap((group) => group.tabs)
-    .map((tab) => (tab.input as vscode.TabInputText)?.uri?.fsPath)
-    .filter(Boolean)
-    .map((filePath) => path.basename(filePath).split('.')[0]);
+			.flatMap((group) => group.tabs)
+			.map((tab) => (tab.input as vscode.TabInputText)?.uri?.fsPath)
+			.filter(Boolean)
+			.map((filePath) => path.basename(filePath).split('.')[0]);
 
 		const filename = StringUtils.encode(
 			`${AppConstant.ExtensionName}-${snippetName}`,
@@ -31,7 +31,6 @@ export async function renameSnippetName(
 		if (allOpenFiles.includes(filename)) {
 			VscodeMessage.error(
 				`Please close this file "${filename}" before renaming`,
-				'',
 			);
 			return;
 		}
@@ -96,7 +95,7 @@ export async function renameSnippetName(
 			overWrite: true,
 		});
 
-		VscodeMessage.info(`Successfully renamed!`);
+		VscodeMessage.success(`Successfully renamed!`);
 
 		const listSnippets = await SnippetUtils.readStorages();
 		appContext.webview.postMessage(

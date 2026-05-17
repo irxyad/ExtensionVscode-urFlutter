@@ -1,6 +1,7 @@
 import { appContext } from '@common/app-context';
 import { logger } from '@common/utils/logger.utils';
 import ValidationUtils from '@common/utils/validation.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import { spawn } from 'child_process';
 import path from 'path';
 import * as vscode from 'vscode';
@@ -12,7 +13,7 @@ export async function createFlutter(): Promise<void> {
 	});
 
 	if (!uris?.length) {
-		vscode.window.showInformationMessage('No folder selected.');
+    VscodeMessage.error('No folder selected.');
 		return;
 	}
 

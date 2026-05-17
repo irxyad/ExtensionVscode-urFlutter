@@ -19,7 +19,7 @@ export async function installScrcpy() {
 	);
 
 	if (!platform) {
-		vscode.window.showErrorMessage('Cancelled');
+		vscode.window.showInformationMessage('Cancelled');
 		return;
 	}
 

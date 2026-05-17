@@ -5,6 +5,7 @@ import {
 import ProjectPath from '@common/constants/project-path.constants';
 import FileUtils from '@common/utils/file.utils';
 import PubspecUtils from '@common/utils/pubspec.utils';
+import { VscodeMessage } from '@common/utils/vscode-message.utils';
 import * as vscode from 'vscode';
 import { createLocalizationFiles } from '../create-files.utils';
 
@@ -20,10 +21,10 @@ export async function installOrAddLocalization(isInstalling: boolean) {
 		const isLocalizationSetup = hasPackageLocalization && hasFolderTranslation;
 
 		if (!isLocalizationSetup) {
-			const sidebarLocalization = SidebarMenu.Setup.Localization.Install;
+			const sidebarLocalization = SidebarMenu.Localization.Install;
 			const sidebarLocalName = getSidebarData(sidebarLocalization);
 
-			vscode.window.showErrorMessage(
+			VscodeMessage.error(
 				`Localization is not set up yet. Please run "${sidebarLocalName?.title}" first.`,
 			);
 
